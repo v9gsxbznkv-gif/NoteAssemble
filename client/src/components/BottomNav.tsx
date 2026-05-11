@@ -1,0 +1,62 @@
+import { Home, PlusCircle, Clock } from "lucide-react";
+import { Link, useLocation } from "wouter";
+
+const tabs = [
+  { path: "/", label: "Home", icon: Home },
+  { path: "/new", label: "New Session", icon: PlusCircle },
+  { path: "/history", label: "History", icon: Clock },
+];
+
+export default function BottomNav() {
+  const [location] = useLocation();
+
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50"
+      style={{
+        background: "oklch(9% 0 0 / 0.95)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        borderTop: "1px solid oklch(22% 0 0)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      <div className="flex items-stretch max-w-lg mx-auto">
+        {tabs.map(({ path, label, icon: Icon }) => {
+          const isActive = path === "/" ? location === "/" : location.startsWith(path);
+          return (
+            <Link
+              key={path}
+              href={path}
+              className="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all duration-200"
+              style={{
+                color: isActive ? "oklch(68% 0.12 75)" : "oklch(50% 0 0)",
+                textDecoration: "none",
+              }}
+            >
+              <Icon
+                size={22}
+                strokeWidth={isActive ? 2.2 : 1.8}
+                style={{
+                  filter: isActive ? "drop-shadow(0 0 6px oklch(68% 0.12 75 / 0.5))" : "none",
+                  transition: "filter 0.2s",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: isActive ? 600 : 400,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                {label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
