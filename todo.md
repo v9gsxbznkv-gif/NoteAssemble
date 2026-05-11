@@ -42,3 +42,9 @@
 - [x] Mobile responsiveness audit
 - [x] Empty states and error states
 - [x] Final checkpoint and publish
+
+## Rename Task
+- [x] Update VITE_APP_TITLE secret to "NoteAssemble" (requires manual update in Settings → General)
+- [x] Confirm index.html title is "NoteAssemble"
+- [x] Confirm manifest.json name is "NoteAssemble"
+- [x] Confirm Login page branding shows "NoteAssemble"
