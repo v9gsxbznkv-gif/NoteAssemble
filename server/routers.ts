@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { execSync } from "child_process";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -76,6 +77,29 @@ const AI_SCHEMA = {
   additionalProperties: false,
 };
 
+// ─── Fireflies MCP helper ──────────────────────────────────────────────────────
+
+function callFirefliesMCP(tool: string, input: Record<string, unknown>): unknown {
+  // Write input to a temp file to avoid shell-injection from user-supplied strings
+  const { writeFileSync, unlinkSync } = require("fs") as typeof import("fs");
+  const { tmpdir } = require("os") as typeof import("os");
+  const { join } = require("path") as typeof import("path");
+  const tmpFile = join(tmpdir(), `ff_input_${Date.now()}.json`);
+  try {
+    writeFileSync(tmpFile, JSON.stringify(input), "utf-8");
+    const result = execSync(
+      `manus-mcp-cli tool call ${tool} --server fireflies --input "$(cat ${tmpFile})"`,
+      { encoding: "utf-8", timeout: 30000, shell: "/bin/bash" }
+    );
+    const marker = "Tool execution result:\n";
+    const idx = result.indexOf(marker);
+    const raw = idx >= 0 ? result.slice(idx + marker.length).trim() : result.trim();
+    try { return JSON.parse(raw); } catch { return raw; }
+  } finally {
+    try { unlinkSync(tmpFile); } catch { /* ignore cleanup errors */ }
+  }
+}
+
 // ─── Router ────────────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -90,17 +114,118 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Fireflies ──────────────────────────────────────────────────────────────
+  fireflies: router({
+    /**
+     * Search Fireflies meetings by keyword (title or content).
+     * Returns a list of { id, title, date } for the user to pick from.
+     */
+    search: protectedProcedure
+      .input(z.object({ keyword: z.string().min(1) }))
+      .query(async ({ input }) => {
+        try {
+          const raw = callFirefliesMCP("fireflies_get_transcripts", {
+            keyword: input.keyword,
+            limit: 10,
+            scope: "title",
+            format: "json",
+          }) as Array<{ id: string; title: string; dateString: string }>;
+
+          if (!Array.isArray(raw)) return [];
+
+          return raw.map((m) => ({
+            id: m.id,
+            title: m.title ?? "Untitled Meeting",
+            date: m.dateString ?? null,
+          }));
+        } catch (err) {
+          console.error("[Fireflies] search error:", err);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to search Fireflies" });
+        }
+      }),
+
+    /**
+     * Fetch the full transcript text for a given Fireflies meeting ID.
+     * Returns a plain-text string of "Speaker: sentence" lines.
+     */
+    getTranscript: protectedProcedure
+      .input(z.object({ transcriptId: z.string() }))
+      .query(async ({ input }) => {
+        try {
+          const raw = callFirefliesMCP("fireflies_get_transcript", {
+            transcriptId: input.transcriptId,
+          });
+
+          // The CLI returns a text format like "Sentences: Speaker 1: ...\nSpeaker 2: ..."
+          // If it came back as a string (text format), return as-is
+          if (typeof raw === "string") {
+            // Extract sentences section
+            const sentencesMatch = raw.match(/Sentences:\s*([\s\S]+?)(?:\n[A-Z][a-z]+:|$)/);
+            if (sentencesMatch) return { transcript: sentencesMatch[1].trim() };
+            return { transcript: raw };
+          }
+
+          // If JSON object with sentences array
+          if (raw && typeof raw === "object" && "sentences" in (raw as object)) {
+            const sentences = (raw as { sentences: Array<{ speaker_name?: string; text: string }> }).sentences;
+            const text = sentences
+              .map((s) => `${s.speaker_name ?? "Speaker"}: ${s.text}`)
+              .join("\n");
+            return { transcript: text };
+          }
+
+          return { transcript: String(raw) };
+        } catch (err) {
+          console.error("[Fireflies] getTranscript error:", err);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch transcript from Fireflies" });
+        }
+      }),
+
+    /**
+     * List recent meetings (no keyword filter) — used to show "recent" dropdown.
+     */
+    recent: protectedProcedure.query(async () => {
+      try {
+        const raw = callFirefliesMCP("fireflies_get_transcripts", {
+          limit: 10,
+          format: "json",
+        }) as Array<{ id: string; title: string; dateString: string }>;
+
+        if (!Array.isArray(raw)) return [];
+
+        return raw.map((m) => ({
+          id: m.id,
+          title: m.title ?? "Untitled Meeting",
+          date: m.dateString ?? null,
+        }));
+      } catch (err) {
+        console.error("[Fireflies] recent error:", err);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch recent Fireflies meetings" });
+      }
+    }),
+  }),
+
+  // ─── Sessions ───────────────────────────────────────────────────────────────
   sessions: router({
     list: protectedProcedure
       .input(z.object({ search: z.string().optional() }))
-      .query(async ({ ctx, input }) => getSessionsByUser(ctx.user.id, input.search)),
+      .query(async ({ ctx, input }) => {
+        const rows = await getSessionsByUser(ctx.user.id, input.search);
+        return rows.map((s) => ({
+          ...s,
+          parsedTags: (() => { try { return s.tags ? (JSON.parse(s.tags) as string[]) : []; } catch { return []; } })(),
+        }));
+      }),
 
     get: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {
         const session = await getSessionById(input.id, ctx.user.id);
         if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
-        return session;
+        return {
+          ...session,
+          parsedTags: (() => { try { return session.tags ? (JSON.parse(session.tags) as string[]) : []; } catch { return []; } })(),
+        };
       }),
 
     create: protectedProcedure
@@ -108,6 +233,7 @@ export const appRouter = router({
         name: z.string().min(1).max(255),
         transcript: z.string().optional(),
         personalNotes: z.string().optional(),
+        tags: z.array(z.string()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const id = await createSession({
@@ -115,6 +241,7 @@ export const appRouter = router({
           name: input.name,
           transcript: input.transcript ?? null,
           personalNotes: input.personalNotes ?? null,
+          tags: input.tags && input.tags.length > 0 ? JSON.stringify(input.tags) : null,
           status: "draft",
         });
         return { id };
@@ -126,9 +253,14 @@ export const appRouter = router({
         name: z.string().min(1).max(255).optional(),
         transcript: z.string().optional(),
         personalNotes: z.string().optional(),
+        tags: z.array(z.string()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const { id, ...data } = input;
+        const { id, tags, ...rest } = input;
+        const data: Record<string, unknown> = { ...rest };
+        if (tags !== undefined) {
+          data.tags = tags.length > 0 ? JSON.stringify(tags) : null;
+        }
         await updateSession(id, ctx.user.id, data);
         return { success: true };
       }),

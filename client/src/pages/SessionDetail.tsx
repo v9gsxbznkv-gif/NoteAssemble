@@ -149,8 +149,53 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+const PRESET_TAGS = ["Church", "Real Estate", "Consulting", "Construction", "STR", "Personal"];
 
+function TagQuickAdd({ currentTags, onAdd }: { currentTags: string[]; onAdd: (tag: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState("");
+  const available = PRESET_TAGS.filter((t) => !currentTags.includes(t));
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: "4px",
+          padding: "4px 10px", borderRadius: "20px",
+          background: "oklch(14% 0 0)", border: "1px dashed oklch(28% 0 0)",
+          color: "oklch(45% 0 0)", fontSize: "12px", fontFamily: "var(--font-sans)", cursor: "pointer",
+        }}
+      >
+        + Tag
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", alignItems: "center" }}>
+      {available.map((tag) => (
+        <button key={tag} onClick={() => { onAdd(tag); setOpen(false); }}
+          style={{ padding: "4px 10px", borderRadius: "20px", background: "oklch(16% 0 0)", border: "1px solid oklch(26% 0 0)", color: "oklch(60% 0 0)", fontSize: "12px", fontFamily: "var(--font-sans)", cursor: "pointer" }}
+        >{tag}</button>
+      ))}
+      <input
+        autoFocus
+        placeholder="Custom..."
+        value={custom}
+        onChange={(e) => setCustom(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && custom.trim()) { onAdd(custom.trim()); setCustom(""); setOpen(false); }
+          if (e.key === "Escape") setOpen(false);
+        }}
+        style={{ width: "80px", background: "oklch(13% 0 0)", border: "1px solid oklch(28% 0 0)", borderRadius: "6px", padding: "4px 8px", fontSize: "12px", color: "oklch(88% 0 0)", fontFamily: "var(--font-sans)", outline: "none" }}
+      />
+      <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(40% 0 0)", fontSize: "12px", fontFamily: "var(--font-sans)" }}>×</button>
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────────────────────────
 export default function SessionDetail() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const params = useParams<{ id: string }>();
@@ -163,6 +208,8 @@ export default function SessionDetail() {
   const [editTranscript, setEditTranscript] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [tagsDirty, setTagsDirty] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate("/login");
@@ -178,11 +225,26 @@ export default function SessionDetail() {
     if (session) {
       setEditTranscript(session.transcript ?? "");
       setEditNotes(session.personalNotes ?? "");
+      setEditTags(session.parsedTags ?? []);
     }
   }, [session]);
 
   const analyzeSession = trpc.sessions.analyze.useMutation();
   const deleteSession = trpc.sessions.delete.useMutation();
+  const updateSession = trpc.sessions.update.useMutation();
+
+  const handleSaveTags = async (newTags: string[]) => {
+    setEditTags(newTags);
+    setTagsDirty(true);
+    try {
+      await updateSession.mutateAsync({ id: sessionId, tags: newTags });
+      await utils.sessions.get.invalidate({ id: sessionId });
+      setTagsDirty(false);
+      toast.success("Tags updated.");
+    } catch {
+      toast.error("Failed to save tags.");
+    }
+  };
 
   const aiOutput: AiOutput | null = (() => {
     try {
@@ -376,6 +438,31 @@ export default function SessionDetail() {
           >
             <Trash2 size={18} />
           </button>
+        </div>
+
+        {/* Tags row */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px", alignItems: "center" }}>
+          {editTags.map((tag) => (
+            <span
+              key={tag}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "4px",
+                padding: "4px 10px", borderRadius: "20px",
+                background: "oklch(68% 0.12 75 / 0.12)", border: "1px solid oklch(68% 0.12 75 / 0.35)",
+                color: "oklch(68% 0.12 75)", fontSize: "12px", fontFamily: "var(--font-sans)",
+              }}
+            >
+              {tag}
+              <button
+                onClick={() => handleSaveTags(editTags.filter((t) => t !== tag))}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", color: "oklch(68% 0.12 75 / 0.7)" }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              </button>
+            </span>
+          ))}
+          {/* Quick add tag */}
+          <TagQuickAdd currentTags={editTags} onAdd={(tag) => handleSaveTags([...editTags, tag])} />
         </div>
 
         {/* Delete Confirm */}

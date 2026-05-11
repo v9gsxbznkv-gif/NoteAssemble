@@ -23,6 +23,7 @@ export const sessions = mysqlTable("sessions", {
   transcript: text("transcript"),
   personalNotes: text("personalNotes"),
   aiOutput: text("aiOutput"), // JSON string of structured AI analysis
+  tags: text("tags"), // JSON array of tag strings e.g. ["Church","Real Estate"]
   status: mysqlEnum("status", ["draft", "analyzed"]).default("draft").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

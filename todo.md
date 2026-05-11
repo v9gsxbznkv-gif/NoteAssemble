@@ -48,3 +48,25 @@
 - [x] Confirm index.html title is "NoteAssemble"
 - [x] Confirm manifest.json name is "NoteAssemble"
 - [x] Confirm Login page branding shows "NoteAssemble"
+
+## Feature: Fireflies MCP Integration
+- [x] Explore Fireflies MCP tools (list, search transcripts)
+- [x] Add server-side tRPC procedure to search and fetch Fireflies transcripts via MCP
+- [x] Add "Pull from Fireflies" button on New Session page with meeting name search
+- [x] Auto-populate transcript field from selected Fireflies meeting
+- [x] Handle errors and empty states for Fireflies fetch
+
+## Feature: Session Tagging + Filtering
+- [x] Add tags column (JSON array) to sessions table in schema
+- [x] Generate and apply DB migration for tags column
+- [x] Update createSession and updateSession DB helpers to handle tags
+- [x] Update tRPC procedures to accept and return tags
+- [x] Add tag input (chip-style) on New Session and Session Detail pages
+- [x] Add filter chips on Dashboard and History pages (Church, Real Estate, Consulting + custom)
+- [x] Filter sessions by selected tag client-side
+
+## Gap Fixes (post-feature review)
+- [x] Refactor Fireflies MCP calls to use temp-file arg passing (safe from shell injection)
+- [x] Normalize sessions.list and sessions.get to return parsedTags as string[] alongside raw tags
+- [x] Add TagQuickAdd component to SessionDetail with preset + custom tag support
+- [x] Tag chips on SessionDetail with inline remove and auto-save via updateSession mutation
