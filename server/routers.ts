@@ -234,8 +234,15 @@ export const appRouter = router({
           });
         }
 
+        // Truncate transcript to 120k chars (~90k tokens) to stay within LLM context limits
+        const MAX_TRANSCRIPT_CHARS = 120_000;
+        const transcriptText = input.transcript.trim();
+        const truncatedTranscript = transcriptText.length > MAX_TRANSCRIPT_CHARS
+          ? transcriptText.slice(0, MAX_TRANSCRIPT_CHARS) + "\n\n[Transcript truncated to fit analysis window — full text saved]"
+          : transcriptText;
+
         const userMessage = [
-          input.transcript.trim() ? `TRANSCRIPT:\n${input.transcript.trim()}` : "TRANSCRIPT: (none provided)",
+          truncatedTranscript ? `TRANSCRIPT:\n${truncatedTranscript}` : "TRANSCRIPT: (none provided)",
           input.personalNotes.trim() ? `PERSONAL NOTES:\n${input.personalNotes.trim()}` : "PERSONAL NOTES: (none provided)",
         ].join("\n\n");
 

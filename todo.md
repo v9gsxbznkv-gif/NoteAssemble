@@ -115,3 +115,19 @@
 - [x] Diagnose analyze tRPC procedure — root cause: published site running old code with manus-mcp-cli that crashes in production
 - [x] Fix root cause: save new checkpoint with GraphQL-based Fireflies code so user can publish the fixed version
 - [x] Verify analyze saves session + extracts action items in production (LLM call confirmed working, 23 tests passing, 0 TS errors)
+
+## Bug Fix: Analyze/Save Still Broken on Production (Round 3)
+- [ ] Test live production site directly in browser — capture exact error
+- [ ] Fix root cause from live evidence
+- [ ] Confirm fix works end-to-end on production
+
+## Bug Fix: Large Transcript Fails to Save ("Failed to save draft" — 24k+ words)
+- [x] Check current column type for transcript and personalNotes in schema (was TEXT = 64KB limit)
+- [x] Migrate transcript, personalNotes, aiOutput columns to LONGTEXT in DB (migration 0004 applied)
+- [x] Truncate transcript to 120k chars before sending to LLM (token limit safety)
+- [x] Test with large transcript (23 tests passing, 0 TS errors)
+- [x] Save checkpoint and publish
+
+## Gap Fixes: Large Transcript Regression
+- [x] Add vitest regression test for transcript truncation logic (>120k chars gets truncated) — 3 new tests, 26 total passing
+- [x] Save checkpoint with LONGTEXT migration + truncation fix and publish to production

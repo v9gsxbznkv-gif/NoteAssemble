@@ -310,3 +310,51 @@ describe("fireflies GraphQL API module", () => {
     expect(result.text).toContain("Speaker 2:");
   });
 });
+
+// ─── Transcript Truncation Regression ────────────────────────────────────────
+describe("sessions.analyze — large transcript truncation", () => {
+  it("accepts a transcript larger than the old TEXT limit (64KB) without throwing", async () => {
+    const caller = appRouter.createCaller(createCtx());
+    // Simulate a 24k-word transcript (~150k chars) — previously caused "Failed to save draft"
+    const largeTranscript = "Speaker 1: This is a test sentence. ".repeat(5000); // ~180k chars
+    const result = await caller.sessions.analyze({
+      id: 1,
+      transcript: largeTranscript,
+      personalNotes: "Private notes here.",
+    });
+    expect(result.aiOutput).toBeDefined();
+    expect(result.aiOutput.summary).toBe("Test summary.");
+  });
+
+  it("truncates transcript to 120k chars before sending to LLM", async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    const caller = appRouter.createCaller(createCtx());
+    const largeTranscript = "A".repeat(150_000); // 150k chars — exceeds 120k limit
+    await caller.sessions.analyze({
+      id: 1,
+      transcript: largeTranscript,
+      personalNotes: "",
+    });
+    const callArg = vi.mocked(invokeLLM).mock.calls.at(-1)?.[0];
+    const userContent = callArg?.messages?.find((m: { role: string }) => m.role === "user")?.content as string;
+    expect(typeof userContent).toBe("string");
+    // The truncated transcript should be at most 120k chars + the truncation notice
+    expect(userContent.length).toBeLessThan(150_000);
+    expect(userContent).toContain("[Transcript truncated to fit analysis window");
+  });
+
+  it("does not truncate transcripts under 120k chars", async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    const caller = appRouter.createCaller(createCtx());
+    const normalTranscript = "Speaker 1: Short meeting. Speaker 2: Agreed.";
+    await caller.sessions.analyze({
+      id: 1,
+      transcript: normalTranscript,
+      personalNotes: "",
+    });
+    const callArg = vi.mocked(invokeLLM).mock.calls.at(-1)?.[0];
+    const userContent = callArg?.messages?.find((m: { role: string }) => m.role === "user")?.content as string;
+    expect(userContent).toContain(normalTranscript);
+    expect(userContent).not.toContain("[Transcript truncated");
+  });
+});

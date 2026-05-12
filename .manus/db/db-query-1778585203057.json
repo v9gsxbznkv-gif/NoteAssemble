@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `sessions` MODIFY COLUMN `transcript` longtext;\nALTER TABLE `sessions` MODIFY COLUMN `personalNotes` longtext;\nALTER TABLE `sessions` MODIFY COLUMN `aiOutput` longtext;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 389WXeUiqLtF2L4.99e8f69fe3e9 --database VAGE5Jp3b45KbifC3JSBbp --execute ALTER TABLE `sessions` MODIFY COLUMN `transcript` longtext;\nALTER TABLE `sessions` MODIFY COLUMN `personalNotes` longtext;\nALTER TABLE `sessions` MODIFY COLUMN `aiOutput` longtext;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 489
+}
