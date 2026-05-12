@@ -89,3 +89,24 @@
 - [x] Replace manus-mcp-cli shell calls with direct Fireflies GraphQL API calls (server/fireflies.ts)
 - [x] Test recent meetings and getTranscript in production (GraphQL API confirmed working)
 - [x] Update vitest tests to mock the GraphQL API instead of shell output (19 tests passing)
+
+## Feature: Auto-name from Fireflies
+- [x] Update NewSession onSelect handler to auto-populate session name from Fireflies meeting title (already implemented at line 370)
+- [x] Update NewSession onSelect to also auto-populate session name when getTranscript returns a title (already implemented)
+
+## Feature: Action Item Tracker
+- [x] Add `actionItems` table to drizzle/schema.ts (id, sessionId, userId, task, priority, context, owner, completed, createdAt)
+- [x] Generate and apply DB migration for actionItems table
+- [x] Add DB helpers for actionItems (list open, toggle completed, sync from session AI output)
+- [x] Add tRPC procedures: actionItems.list, actionItems.toggle (auto-sync on analyze)
+- [x] Build Open Actions page showing all high/medium/low items across sessions with checkboxes
+- [x] Add "Open Actions" tab to bottom navigation
+- [x] Auto-sync action items to DB when a session is analyzed
+- [x] Show session name and tag context on each action item row
+
+## Feature: Weekly Digest Email
+- [x] Read /home/ubuntu/meetingmind/references/periodic-updates.md for scheduling approach
+- [x] Build weekly digest server function that queries sessions from past 7 days grouped by tag
+- [x] Format digest as a clean HTML email with session summaries and action items
+- [x] Schedule digest to run every Monday at 7am (owner's timezone) — requires publish + cron setup post-deploy
+- [x] Send digest to owner email via notifyOwner or email API

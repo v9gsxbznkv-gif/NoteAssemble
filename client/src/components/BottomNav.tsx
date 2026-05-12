@@ -1,9 +1,10 @@
-import { Home, PlusCircle, Clock } from "lucide-react";
+import { Home, PlusCircle, Clock, CheckSquare } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 const tabs = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/new", label: "New Session", icon: PlusCircle },
+  { path: "/new", label: "New", icon: PlusCircle },
+  { path: "/actions", label: "Actions", icon: CheckSquare },
   { path: "/history", label: "History", icon: Clock },
 ];
 

@@ -48,7 +48,8 @@ function FirefliesPicker({ onSelect }: { onSelect: (transcript: string, title: s
     if (getTranscript.data && loadingId) {
       const meetings = debouncedTerm ? search.data : recent.data;
       const meeting = meetings?.find((m) => m.id === loadingId);
-      onSelect(getTranscript.data.transcript, meeting?.title ?? "Fireflies Meeting");
+      const resolvedTitle = getTranscript.data.title || meeting?.title || "Fireflies Meeting";
+      onSelect(getTranscript.data.transcript, resolvedTitle);
       setLoadingId(null);
       setOpen(false);
       toast.success("Transcript imported from Fireflies");

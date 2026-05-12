@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
@@ -33,6 +33,34 @@ vi.mock("./db", () => ({
   }),
   updateSession: vi.fn().mockResolvedValue(undefined),
   deleteSession: vi.fn().mockResolvedValue(undefined),
+  getOpenActionItems: vi.fn().mockResolvedValue([
+    {
+      id: 1,
+      sessionId: 1,
+      sessionName: "Test Session",
+      sessionTags: JSON.stringify(["Church"]),
+      task: "Follow up on budget",
+      priority: "high",
+      context: "Urgent",
+      owner: "Chad",
+      completed: false,
+      createdAt: new Date(),
+    },
+    {
+      id: 2,
+      sessionId: 1,
+      sessionName: "Test Session",
+      sessionTags: null,
+      task: "Schedule review",
+      priority: "medium",
+      context: "Next week",
+      owner: null,
+      completed: false,
+      createdAt: new Date(),
+    },
+  ]),
+  upsertActionItemsForSession: vi.fn().mockResolvedValue(undefined),
+  toggleActionItem: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Mock LLM ─────────────────────────────────────────────────────────────────
@@ -44,7 +72,9 @@ vi.mock("./_core/llm", () => ({
           content: JSON.stringify({
             summary: "Test summary.",
             keyDecisions: [{ decision: "Approved budget", context: "Voted 5-0" }],
-            actionItems: [{ task: "Follow up", priority: "high", context: "Urgent", owner: "Chad" }],
+            actionItems: [
+              { task: "Follow up", priority: "high", context: "Urgent", owner: "Chad" },
+            ],
             insights: [{ insight: "Numbers may be off", source: "notes" }],
             watchItems: [{ item: "Budget accuracy", type: "risk" }],
           }),
@@ -159,6 +189,44 @@ describe("sessions.delete", () => {
     const caller = appRouter.createCaller(createCtx());
     const result = await caller.sessions.delete({ id: 1 });
     expect(result.success).toBe(true);
+  });
+});
+
+// ─── Action Items ────────────────────────────────────────────────────────────
+describe("actionItems.list", () => {
+  it("returns action items for the authenticated user", async () => {
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.actionItems.list();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+    expect(result[0]).toHaveProperty("task");
+    expect(result[0]).toHaveProperty("priority");
+    expect(result[0]).toHaveProperty("sessionName");
+  });
+
+  it("action items include parsedTags from session", async () => {
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.actionItems.list();
+    expect(result[0]).toHaveProperty("parsedTags");
+    expect(Array.isArray(result[0]?.parsedTags)).toBe(true);
+  });
+});
+
+describe("actionItems.toggle", () => {
+  it("marks an action item as completed", async () => {
+    const { toggleActionItem } = await import("./db");
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.actionItems.toggle({ id: 1, completed: true });
+    expect(result.success).toBe(true);
+    expect(vi.mocked(toggleActionItem)).toHaveBeenCalledWith(1, 1, true);
+  });
+
+  it("marks an action item as uncompleted (toggle back)", async () => {
+    const { toggleActionItem } = await import("./db");
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.actionItems.toggle({ id: 2, completed: false });
+    expect(result.success).toBe(true);
+    expect(vi.mocked(toggleActionItem)).toHaveBeenCalledWith(2, 1, false);
   });
 });
 

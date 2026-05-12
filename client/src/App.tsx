@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import NewSession from "./pages/NewSession";
 import History from "./pages/History";
 import SessionDetail from "./pages/SessionDetail";
+import Actions from "./pages/Actions";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/new" component={NewSession} />
       <Route path="/history" component={History} />
       <Route path="/session/:id" component={SessionDetail} />
+      <Route path="/actions" component={Actions} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

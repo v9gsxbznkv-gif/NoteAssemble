@@ -1,6 +1,6 @@
 import { and, desc, eq, like, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertSession, InsertUser, Session, sessions, users } from "../drizzle/schema";
+import { ActionItem, actionItems, InsertActionItem, InsertSession, InsertUser, Session, sessions, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -147,4 +147,65 @@ export async function deleteSession(id: number, userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(sessions).where(and(eq(sessions.id, id), eq(sessions.userId, userId)));
+}
+
+// ─── Action Item helpers ──────────────────────────────────────────────────────────────
+
+export async function getOpenActionItems(userId: number): Promise<(ActionItem & { sessionName: string; sessionTags: string | null })[]> {
+  const db = await getDb();
+  if (!db) return [];
+  // Join with sessions to get session name and tags for context
+  const rows = await db
+    .select({
+      id: actionItems.id,
+      sessionId: actionItems.sessionId,
+      userId: actionItems.userId,
+      task: actionItems.task,
+      priority: actionItems.priority,
+      context: actionItems.context,
+      owner: actionItems.owner,
+      completed: actionItems.completed,
+      createdAt: actionItems.createdAt,
+      updatedAt: actionItems.updatedAt,
+      sessionName: sessions.name,
+      sessionTags: sessions.tags,
+    })
+    .from(actionItems)
+    .innerJoin(sessions, eq(actionItems.sessionId, sessions.id))
+    .where(eq(actionItems.userId, userId))
+    .orderBy(desc(actionItems.createdAt));
+  return rows;
+}
+
+export async function upsertActionItemsForSession(
+  sessionId: number,
+  userId: number,
+  items: Array<{ task: string; priority: "high" | "medium" | "low"; context: string; owner: string }>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Delete existing non-completed items for this session, then re-insert
+  await db
+    .delete(actionItems)
+    .where(and(eq(actionItems.sessionId, sessionId), eq(actionItems.userId, userId), eq(actionItems.completed, false)));
+  if (items.length === 0) return;
+  const rows: InsertActionItem[] = items.map((item) => ({
+    sessionId,
+    userId,
+    task: item.task,
+    priority: item.priority,
+    context: item.context || null,
+    owner: item.owner || null,
+    completed: false,
+  }));
+  await db.insert(actionItems).values(rows);
+}
+
+export async function toggleActionItem(id: number, userId: number, completed: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(actionItems)
+    .set({ completed })
+    .where(and(eq(actionItems.id, id), eq(actionItems.userId, userId)));
 }

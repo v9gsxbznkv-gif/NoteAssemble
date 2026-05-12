@@ -8,9 +8,12 @@ import { invokeLLM } from "./_core/llm";
 import {
   createSession,
   deleteSession,
+  getOpenActionItems,
   getSessionById,
   getSessionsByUser,
+  toggleActionItem,
   updateSession,
+  upsertActionItemsForSession,
 } from "./db";
 import { getRecentMeetings, searchMeetings, getTranscriptText } from "./fireflies";
 
@@ -248,6 +251,13 @@ export const appRouter = router({
         });
 
         const rawContent = String(response.choices[0]?.message?.content ?? "{}");
+        const parsed = JSON.parse(rawContent) as {
+          summary: string;
+          keyDecisions: Array<{ decision: string; context: string }>;
+          actionItems: Array<{ task: string; priority: "high" | "medium" | "low"; context: string; owner: string }>;
+          insights: Array<{ insight: string; source: string }>;
+          watchItems: Array<{ item: string; type: string }>;
+        };
 
         await updateSession(input.id, ctx.user.id, {
           transcript: input.transcript,
@@ -256,7 +266,31 @@ export const appRouter = router({
           status: "analyzed",
         });
 
-        return { aiOutput: JSON.parse(rawContent) };
+        // Auto-sync action items to the tracker table
+        if (Array.isArray(parsed.actionItems) && parsed.actionItems.length > 0) {
+          await upsertActionItemsForSession(input.id, ctx.user.id, parsed.actionItems);
+        }
+
+        return { aiOutput: parsed };
+      }),
+  }),
+  // ─── Action Items ────────────────────────────────────────────────────────────
+  actionItems: router({
+    /** List all action items for the current user (open and completed), with session context. */
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const rows = await getOpenActionItems(ctx.user.id);
+      return rows.map((r) => ({
+        ...r,
+        parsedTags: (() => { try { return r.sessionTags ? (JSON.parse(r.sessionTags) as string[]) : []; } catch { return []; } })(),
+      }));
+    }),
+
+    /** Toggle an action item's completed state. */
+    toggle: protectedProcedure
+      .input(z.object({ id: z.number(), completed: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        await toggleActionItem(input.id, ctx.user.id, input.completed);
+        return { success: true };
       }),
   }),
 });

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `actionItems` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`sessionId` int NOT NULL,\n\t`userId` int NOT NULL,\n\t`task` text NOT NULL,\n\t`priority` enum('high','medium','low') NOT NULL DEFAULT 'medium',\n\t`context` text,\n\t`owner` varchar(255),\n\t`completed` boolean NOT NULL DEFAULT false,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `actionItems_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 389WXeUiqLtF2L4.99e8f69fe3e9 --database VAGE5Jp3b45KbifC3JSBbp --execute CREATE TABLE `actionItems` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`sessionId` int NOT NULL,\n\t`userId` int NOT NULL,\n\t`task` text NOT NULL,\n\t`priority` enum('high','medium','low') NOT NULL DEFAULT 'medium',\n\t`context` text,\n\t`owner` varchar(255),\n\t`completed` boolean NOT NULL DEFAULT false,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `actionItems_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 342
+}
