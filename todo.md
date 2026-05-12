@@ -165,3 +165,10 @@
 - [x] Add "Paste from App" button — opens bottom-sheet modal textarea for bulk paste, appends to personalNotes on confirm
 - [x] Handle errors (image too large >10MB, unreadable text) with user-facing toast messages
 - [x] Update vitest tests for extractFromImage procedure (2 tests — success + empty response)
+
+## Bug Fix: Cannot Edit Session Name or Tags on Session Detail
+- [x] Add inline name editing to SessionDetail.tsx (click-to-edit, save on blur/Enter)
+- [x] Wire name edit to updateSession tRPC mutation with cache invalidation
+- [x] Tag editing already existed (TagQuickAdd + remove chips) — confirmed working
+- [x] Wire tag edit to updateSession tRPC mutation — already wired via handleSaveTags
+- [x] Show visual feedback (toast "Name updated" / "Tags updated") after update

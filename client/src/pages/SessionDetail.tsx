@@ -210,6 +210,8 @@ export default function SessionDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTags, setEditTags] = useState<string[]>([]);
   const [tagsDirty, setTagsDirty] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editName, setEditName] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate("/login");
@@ -226,8 +228,23 @@ export default function SessionDetail() {
       setEditTranscript(session.transcript ?? "");
       setEditNotes(session.personalNotes ?? "");
       setEditTags(session.parsedTags ?? []);
+      setEditName(session.name ?? "");
     }
   }, [session]);
+
+  const handleSaveName = async (newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === session?.name) { setEditingName(false); return; }
+    try {
+      await updateSession.mutateAsync({ id: sessionId, name: trimmed });
+      await utils.sessions.get.invalidate({ id: sessionId });
+      await utils.sessions.list.invalidate();
+      setEditingName(false);
+      toast.success("Name updated.");
+    } catch {
+      toast.error("Failed to update name.");
+    }
+  };
 
   const analyzeSession = trpc.sessions.analyze.useMutation();
   const deleteSession = trpc.sessions.delete.useMutation();
@@ -428,18 +445,39 @@ export default function SessionDetail() {
             <ArrowLeft size={18} style={{ color: "oklch(65% 0 0)" }} />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1
-              style={{
-                fontFamily: "var(--font-serif)",
-                fontSize: "20px",
-                fontWeight: 600,
-                color: "oklch(92% 0 0)",
-                margin: 0,
-                lineHeight: 1.3,
-              }}
-            >
-              {session.name}
-            </h1>
+            {editingName ? (
+              <input
+                autoFocus
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={() => handleSaveName(editName)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveName(editName);
+                  if (e.key === "Escape") { setEditName(session.name); setEditingName(false); }
+                }}
+                style={{
+                  fontFamily: "var(--font-serif)", fontSize: "20px", fontWeight: 600,
+                  color: "oklch(92% 0 0)", background: "oklch(16% 0 0)",
+                  border: "1px solid oklch(68% 0.12 75 / 0.5)", borderRadius: "8px",
+                  padding: "4px 10px", outline: "none", width: "100%", lineHeight: 1.3,
+                }}
+              />
+            ) : (
+              <h1
+                onClick={() => { setEditName(session.name); setEditingName(true); }}
+                title="Click to edit name"
+                style={{
+                  fontFamily: "var(--font-serif)", fontSize: "20px", fontWeight: 600,
+                  color: "oklch(92% 0 0)", margin: 0, lineHeight: 1.3,
+                  cursor: "text", borderRadius: "6px", padding: "2px 4px", marginLeft: "-4px",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(18% 0 0)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                {session.name}
+              </h1>
+            )}
             <p style={{ fontSize: "12px", color: "oklch(45% 0 0)", margin: "4px 0 0", fontFamily: "var(--font-sans)" }}>
               {new Date(session.createdAt).toLocaleDateString("en-US", {
                 weekday: "short", month: "short", day: "numeric", year: "numeric",
