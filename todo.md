@@ -78,3 +78,8 @@
 
 ## Bug Fix Follow-up
 - [x] Add Vitest regression tests for Fireflies MCP stdout parser (JSON array parsing and sentence extraction)
+
+## Bug Fix: Fireflies Recent Meetings Still Not Loading (Round 2)
+- [x] Trace client tRPC call → server procedure → MCP output
+- [x] Fix root cause: queries were inside {open && ...} causing unmount/remount on every click
+- [x] Verify in browser (HMR deployed, TypeScript clean, 17 tests passing)

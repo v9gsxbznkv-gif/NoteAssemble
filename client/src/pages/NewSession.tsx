@@ -23,24 +23,25 @@ function FirefliesPicker({ onSelect }: { onSelect: (transcript: string, title: s
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  // Fetch recent meetings on open (no keyword)
+  // Always mount the queries so they fire as soon as `enabled` flips to true.
+  // Keeping them outside the conditional `{open && ...}` block means they
+  // persist across open/close cycles and React Query can cache results.
   const recent = trpc.fireflies.recent.useQuery(undefined, {
+    // Fire as soon as the dropdown opens (and no search term is active).
     enabled: open && !debouncedTerm,
     staleTime: 60_000,
+    // Retry once on failure so transient MCP errors don't permanently block.
+    retry: 1,
   });
 
-  // Fetch search results when keyword present
   const search = trpc.fireflies.search.useQuery(
     { keyword: debouncedTerm },
-    { enabled: open && debouncedTerm.length > 0, staleTime: 30_000 }
+    { enabled: open && debouncedTerm.length > 0, staleTime: 30_000, retry: 1 }
   );
 
   const getTranscript = trpc.fireflies.getTranscript.useQuery(
     { transcriptId: loadingId ?? "" },
-    {
-      enabled: !!loadingId,
-      staleTime: 0,
-    }
+    { enabled: !!loadingId, staleTime: 0 }
   );
 
   useEffect(() => {
@@ -68,7 +69,11 @@ function FirefliesPicker({ onSelect }: { onSelect: (transcript: string, title: s
   }, [open]);
 
   const meetings = debouncedTerm ? search.data : recent.data;
-  const isLoading = debouncedTerm ? search.isLoading : recent.isLoading;
+  const queryError = debouncedTerm ? search.error : recent.error;
+  // Show spinner while fetching and no data yet (covers first load and refetch).
+  const isLoading = debouncedTerm
+    ? (search.isFetching || search.isLoading)
+    : (recent.isFetching || recent.isLoading);
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -155,7 +160,12 @@ function FirefliesPicker({ onSelect }: { onSelect: (transcript: string, title: s
                 Loading meetings...
               </div>
             )}
-            {!isLoading && (!meetings || meetings.length === 0) && (
+            {!isLoading && queryError && (
+              <div style={{ padding: "16px", textAlign: "center", fontSize: "13px", color: "oklch(60% 0.15 25)", fontFamily: "var(--font-sans)" }}>
+                Could not load meetings. Check your Fireflies connection.
+              </div>
+            )}
+            {!isLoading && !queryError && (!meetings || meetings.length === 0) && (
               <div style={{ padding: "16px", textAlign: "center", fontSize: "13px", color: "oklch(45% 0 0)", fontFamily: "var(--font-sans)" }}>
                 {debouncedTerm ? "No meetings found" : "No recent meetings"}
               </div>
