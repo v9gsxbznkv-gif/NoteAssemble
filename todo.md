@@ -72,6 +72,9 @@
 - [x] Tag chips on SessionDetail with inline remove and auto-save via updateSession mutation
 
 ## Bug Fix: Fireflies Meetings Not Loading
-- [ ] Diagnose Fireflies MCP call failure (test MCP directly, check server procedure)
-- [ ] Fix root cause in server/routers.ts Fireflies procedures
-- [ ] Verify fix in browser and update tests
+- [x] Diagnose Fireflies MCP call failure (test MCP directly, check server procedure)
+- [x] Fix root cause in server/routers.ts Fireflies procedures
+- [x] Verify fix in browser and update tests
+
+## Bug Fix Follow-up
+- [x] Add Vitest regression tests for Fireflies MCP stdout parser (JSON array parsing and sentence extraction)

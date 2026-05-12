@@ -191,4 +191,46 @@ describe("fireflies.getTranscript", () => {
     expect(typeof result.transcript).toBe("string");
     expect(result.transcript.length).toBeGreaterThan(0);
   });
+
+  it("extracts all sentences after the Sentences: header", async () => {
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.fireflies.getTranscript({ transcriptId: "abc123" });
+    // The mock returns: "Sentences: Speaker 1: We approved the budget.\nSpeaker 2: Agreed."
+    // The parser should return everything after "Sentences: "
+    expect(result.transcript).toContain("Speaker 1: We approved the budget.");
+    expect(result.transcript).toContain("Speaker 2: Agreed.");
+  });
+});
+
+// ─── Fireflies MCP stdout parser regression tests ─────────────────────────────
+describe("fireflies stdout parser", () => {
+  it("recent: parses JSON array from stdout with header lines", async () => {
+    // The fixed parser strips "Tool execution result saved to: ..." and
+    // "Tool execution result:" header lines, then JSON.parses the remainder.
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.fireflies.recent();
+    // Should return a typed array, not throw or return empty
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toHaveProperty("id");
+    expect(result[0]).toHaveProperty("title");
+    expect(result[0]).toHaveProperty("date");
+  });
+
+  it("search: parses JSON array from stdout when keyword is provided", async () => {
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.fireflies.search({ keyword: "payroll" });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0]?.id).toBe("abc123");
+  });
+
+  it("getTranscript: does not truncate transcript at first capitalised word", async () => {
+    // Regression: old regex /Sentences:\s*([\s\S]+?)(?:\n[A-Z][a-z]+:|$)/ would stop
+    // at the first 'Speaker' word after a newline, cutting off the rest of the transcript.
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.fireflies.getTranscript({ transcriptId: "abc123" });
+    // Both lines must be present — the old regex would only return the first
+    expect(result.transcript).toContain("We approved the budget.");
+    expect(result.transcript).toContain("Agreed.");
+  });
 });

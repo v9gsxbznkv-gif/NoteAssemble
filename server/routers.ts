@@ -175,8 +175,13 @@ export const appRouter = router({
           // The CLI returns a text format like "Sentences: Speaker 1: ...\nSpeaker 2: ..."
           // If it came back as a string (text format), return as-is
           if (typeof raw === "string") {
-            // Extract sentences section
-            const sentencesMatch = raw.match(/Sentences:\s*([\s\S]+?)(?:\n[A-Z][a-z]+:|$)/);
+            // The CLI text format is:
+            //   Id: ...
+            //   DateString: ...
+            //   Speakers: ...
+            //   Sentences: Speaker 1: text\nSpeaker 2: text\n...
+            // Capture everything after "Sentences:" to end of string.
+            const sentencesMatch = raw.match(/Sentences:\s*([\s\S]+)$/);
             if (sentencesMatch) return { transcript: sentencesMatch[1].trim() };
             return { transcript: raw };
           }
