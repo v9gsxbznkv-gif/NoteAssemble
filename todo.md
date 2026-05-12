@@ -83,3 +83,9 @@
 - [x] Trace client tRPC call → server procedure → MCP output
 - [x] Fix root cause: queries were inside {open && ...} causing unmount/remount on every click
 - [x] Verify in browser (HMR deployed, TypeScript clean, 17 tests passing)
+
+## Bug Fix: Fireflies Production Fix (manus-mcp-cli not available in deployed runtime)
+- [x] Get Fireflies API key and store as secret (validated: connected as Chad Elliott)
+- [x] Replace manus-mcp-cli shell calls with direct Fireflies GraphQL API calls (server/fireflies.ts)
+- [x] Test recent meetings and getTranscript in production (GraphQL API confirmed working)
+- [x] Update vitest tests to mock the GraphQL API instead of shell output (19 tests passing)

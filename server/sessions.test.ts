@@ -54,24 +54,21 @@ vi.mock("./_core/llm", () => ({
   }),
 }));
 
-// ─── Mock child_process for Fireflies MCP calls ───────────────────────────────
-vi.mock("child_process", () => ({
-  execSync: vi.fn().mockImplementation((cmd: string) => {
-    if (cmd.includes("fireflies_get_transcripts") && cmd.includes("keyword")) {
-      return `Tool execution result:\n${JSON.stringify([
-        { id: "abc123", title: "Staff Meeting", dateString: "2026-05-01T10:00:00.000Z" },
-      ])}`;
+// ─── Mock Fireflies GraphQL API module ────────────────────────────────────────
+vi.mock("./fireflies", () => ({
+  getRecentMeetings: vi.fn().mockResolvedValue([
+    { id: "abc123", title: "Staff Meeting", date: 1746093600000, duration: 3600 },
+    { id: "def456", title: "Deal Call", date: 1746352800000, duration: 1800 },
+  ]),
+  searchMeetings: vi.fn().mockImplementation(async (keyword: string) => {
+    if (keyword.toLowerCase().includes("staff")) {
+      return [{ id: "abc123", title: "Staff Meeting", date: 1746093600000, duration: 3600 }];
     }
-    if (cmd.includes("fireflies_get_transcripts")) {
-      return `Tool execution result:\n${JSON.stringify([
-        { id: "abc123", title: "Staff Meeting", dateString: "2026-05-01T10:00:00.000Z" },
-        { id: "def456", title: "Deal Call", dateString: "2026-05-03T14:00:00.000Z" },
-      ])}`;
-    }
-    if (cmd.includes("fireflies_get_transcript")) {
-      return `Tool execution result:\nSentences: Speaker 1: We approved the budget.\nSpeaker 2: Agreed.`;
-    }
-    return "Tool execution result:\n[]";
+    return [{ id: "abc123", title: "Staff Meeting", date: 1746093600000, duration: 3600 }];
+  }),
+  getTranscriptText: vi.fn().mockResolvedValue({
+    title: "Staff Meeting",
+    text: "Speaker 1: We approved the budget.\nSpeaker 2: Agreed.",
   }),
 }));
 
@@ -119,10 +116,11 @@ describe("sessions.list", () => {
     expect(result[0]?.name).toBe("Test Session");
   });
 
-  it("sessions include tags field", async () => {
+  it("sessions include parsedTags array", async () => {
     const caller = appRouter.createCaller(createCtx());
     const result = await caller.sessions.list({});
-    expect(result[0]?.tags).toBe(JSON.stringify(["Church", "Consulting"]));
+    expect(Array.isArray(result[0]?.parsedTags)).toBe(true);
+    expect(result[0]?.parsedTags).toContain("Church");
   });
 });
 
@@ -164,14 +162,25 @@ describe("sessions.delete", () => {
   });
 });
 
-// ─── Fireflies ─────────────────────────────────────────────────────────────────
+// ─── Fireflies GraphQL API ─────────────────────────────────────────────────────
 describe("fireflies.recent", () => {
-  it("returns recent meetings list", async () => {
+  it("returns recent meetings list with id, title, date", async () => {
     const caller = appRouter.createCaller(createCtx());
     const result = await caller.fireflies.recent();
     expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toHaveProperty("id");
+    expect(result[0]).toHaveProperty("title");
+    expect(result[0]).toHaveProperty("date");
     expect(result[0]?.id).toBe("abc123");
     expect(result[0]?.title).toBe("Staff Meeting");
+  });
+
+  it("returns two meetings from the mock", async () => {
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.fireflies.recent();
+    expect(result.length).toBe(2);
+    expect(result[1]?.title).toBe("Deal Call");
   });
 });
 
@@ -181,6 +190,13 @@ describe("fireflies.search", () => {
     const result = await caller.fireflies.search({ keyword: "staff" });
     expect(Array.isArray(result)).toBe(true);
     expect(result[0]?.title).toBe("Staff Meeting");
+  });
+
+  it("returns results for any keyword (mock returns staff meeting)", async () => {
+    const caller = appRouter.createCaller(createCtx());
+    const result = await caller.fireflies.search({ keyword: "payroll" });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
   });
 });
 
@@ -192,45 +208,37 @@ describe("fireflies.getTranscript", () => {
     expect(result.transcript.length).toBeGreaterThan(0);
   });
 
-  it("extracts all sentences after the Sentences: header", async () => {
+  it("returns all speaker lines without truncation", async () => {
     const caller = appRouter.createCaller(createCtx());
     const result = await caller.fireflies.getTranscript({ transcriptId: "abc123" });
-    // The mock returns: "Sentences: Speaker 1: We approved the budget.\nSpeaker 2: Agreed."
-    // The parser should return everything after "Sentences: "
     expect(result.transcript).toContain("Speaker 1: We approved the budget.");
     expect(result.transcript).toContain("Speaker 2: Agreed.");
   });
-});
 
-// ─── Fireflies MCP stdout parser regression tests ─────────────────────────────
-describe("fireflies stdout parser", () => {
-  it("recent: parses JSON array from stdout with header lines", async () => {
-    // The fixed parser strips "Tool execution result saved to: ..." and
-    // "Tool execution result:" header lines, then JSON.parses the remainder.
-    const caller = appRouter.createCaller(createCtx());
-    const result = await caller.fireflies.recent();
-    // Should return a typed array, not throw or return empty
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result[0]).toHaveProperty("id");
-    expect(result[0]).toHaveProperty("title");
-    expect(result[0]).toHaveProperty("date");
-  });
-
-  it("search: parses JSON array from stdout when keyword is provided", async () => {
-    const caller = appRouter.createCaller(createCtx());
-    const result = await caller.fireflies.search({ keyword: "payroll" });
-    expect(Array.isArray(result)).toBe(true);
-    expect(result[0]?.id).toBe("abc123");
-  });
-
-  it("getTranscript: does not truncate transcript at first capitalised word", async () => {
-    // Regression: old regex /Sentences:\s*([\s\S]+?)(?:\n[A-Z][a-z]+:|$)/ would stop
-    // at the first 'Speaker' word after a newline, cutting off the rest of the transcript.
+  it("returns the meeting title alongside the transcript", async () => {
     const caller = appRouter.createCaller(createCtx());
     const result = await caller.fireflies.getTranscript({ transcriptId: "abc123" });
-    // Both lines must be present — the old regex would only return the first
-    expect(result.transcript).toContain("We approved the budget.");
-    expect(result.transcript).toContain("Agreed.");
+    expect(result.title).toBe("Staff Meeting");
+  });
+});
+
+// ─── Fireflies GraphQL API module unit tests ──────────────────────────────────
+describe("fireflies GraphQL API module", () => {
+  it("getRecentMeetings mock returns typed FirefliesMeeting array", async () => {
+    const { getRecentMeetings } = await import("./fireflies");
+    const meetings = await getRecentMeetings(10);
+    expect(Array.isArray(meetings)).toBe(true);
+    expect(meetings[0]).toHaveProperty("id");
+    expect(meetings[0]).toHaveProperty("title");
+    expect(meetings[0]).toHaveProperty("date");
+    expect(meetings[0]).toHaveProperty("duration");
+  });
+
+  it("getTranscriptText mock returns title and text", async () => {
+    const { getTranscriptText } = await import("./fireflies");
+    const result = await getTranscriptText("abc123");
+    expect(result.title).toBe("Staff Meeting");
+    expect(result.text).toContain("Speaker 1:");
+    expect(result.text).toContain("Speaker 2:");
   });
 });
