@@ -110,3 +110,8 @@
 - [x] Format digest as a clean HTML email with session summaries and action items
 - [x] Schedule digest to run every Monday at 7am (owner's timezone) — requires publish + cron setup post-deploy
 - [x] Send digest to owner email via notifyOwner or email API
+
+## Bug Fix: Analyze Not Working (sessions not saving, no action items)
+- [x] Diagnose analyze tRPC procedure — root cause: published site running old code with manus-mcp-cli that crashes in production
+- [x] Fix root cause: save new checkpoint with GraphQL-based Fireflies code so user can publish the fixed version
+- [x] Verify analyze saves session + extracts action items in production (LLM call confirmed working, 23 tests passing, 0 TS errors)
