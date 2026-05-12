@@ -77,30 +77,46 @@ const AI_SCHEMA = {
   additionalProperties: false,
 };
 
-// ─── Fireflies MCP helper ──────────────────────────────────────────────────────
+// ─── Fireflies MCP helper ──────────────────────────────────────────────────────────────────────────────────
 
 function callFirefliesMCP(tool: string, input: Record<string, unknown>): unknown {
-  // Write input to a temp file to avoid shell-injection from user-supplied strings
+  // Write input to a temp file to avoid shell-injection from user-supplied strings.
+  // The MCP CLI prints: "Tool execution result saved to: <path>\nTool execution result:\n<content>"
+  // We strip the header lines and parse whatever follows.
   const { writeFileSync, unlinkSync } = require("fs") as typeof import("fs");
   const { tmpdir } = require("os") as typeof import("os");
   const { join } = require("path") as typeof import("path");
   const tmpFile = join(tmpdir(), `ff_input_${Date.now()}.json`);
   try {
     writeFileSync(tmpFile, JSON.stringify(input), "utf-8");
-    const result = execSync(
+    const stdout = execSync(
       `manus-mcp-cli tool call ${tool} --server fireflies --input "$(cat ${tmpFile})"`,
       { encoding: "utf-8", timeout: 30000, shell: "/bin/bash" }
     );
-    const marker = "Tool execution result:\n";
-    const idx = result.indexOf(marker);
-    const raw = idx >= 0 ? result.slice(idx + marker.length).trim() : result.trim();
-    try { return JSON.parse(raw); } catch { return raw; }
+
+    // Strip the two header lines emitted by the CLI:
+    //   Line 1: "Tool execution result saved to: /path/to/file"
+    //   Line 2: "Tool execution result:"
+    // Everything after those lines is the actual payload.
+    const lines = stdout.split("\n");
+    let payloadStart = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("Tool execution result:") && !lines[i].includes("saved to")) {
+        payloadStart = i + 1;
+        break;
+      }
+    }
+    const raw = lines.slice(payloadStart).join("\n").trim();
+
+    // If the payload looks like JSON, parse it; otherwise return as plain text.
+    if (raw.startsWith("[") || raw.startsWith("{")) {
+      try { return JSON.parse(raw); } catch { /* fall through to string */ }
+    }
+    return raw;
   } finally {
     try { unlinkSync(tmpFile); } catch { /* ignore cleanup errors */ }
   }
 }
-
-// ─── Router ────────────────────────────────────────────────────────────────────
 
 export const appRouter = router({
   system: systemRouter,

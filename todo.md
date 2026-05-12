@@ -70,3 +70,8 @@
 - [x] Normalize sessions.list and sessions.get to return parsedTags as string[] alongside raw tags
 - [x] Add TagQuickAdd component to SessionDetail with preset + custom tag support
 - [x] Tag chips on SessionDetail with inline remove and auto-save via updateSession mutation
+
+## Bug Fix: Fireflies Meetings Not Loading
+- [ ] Diagnose Fireflies MCP call failure (test MCP directly, check server procedure)
+- [ ] Fix root cause in server/routers.ts Fireflies procedures
+- [ ] Verify fix in browser and update tests
