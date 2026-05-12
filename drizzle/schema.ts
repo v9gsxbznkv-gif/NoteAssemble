@@ -1,4 +1,4 @@
-import { boolean, int, mysqlEnum, mysqlTable, text, longtext, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, bigint, int, mysqlEnum, mysqlTable, text, longtext, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -25,6 +25,7 @@ export const sessions = mysqlTable("sessions", {
   aiOutput: longtext("aiOutput"), // JSON string of structured AI analysis
   tags: text("tags"), // JSON array of tag strings e.g. ["Church","Real Estate"]
   status: mysqlEnum("status", ["draft", "analyzed"]).default("draft").notNull(),
+  shareToken: varchar("shareToken", { length: 64 }), // nullable unique token for read-only sharing
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -42,6 +43,7 @@ export const actionItems = mysqlTable("actionItems", {
   context: text("context"),
   owner: varchar("owner", { length: 255 }),
   completed: boolean("completed").default(false).notNull(),
+  dueDate: bigint("dueDate", { mode: "number" }), // nullable UTC ms timestamp
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

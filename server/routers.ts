@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { randomBytes } from "crypto";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -10,7 +11,9 @@ import {
   deleteSession,
   getOpenActionItems,
   getSessionById,
+  getSessionByShareToken,
   getSessionsByUser,
+  setActionItemDueDate,
   toggleActionItem,
   updateSession,
   upsertActionItemsForSession,
@@ -173,6 +176,23 @@ export const appRouter = router({
         };
       }),
 
+    /** Public read-only view via share token — no auth required. */
+    getShared: publicProcedure
+      .input(z.object({ token: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const session = await getSessionByShareToken(input.token);
+        if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Shared session not found or link has been revoked" });
+        // Return only safe fields — no userId, no raw tags JSON
+        return {
+          id: session.id,
+          name: session.name,
+          status: session.status,
+          aiOutput: session.aiOutput,
+          createdAt: session.createdAt,
+          parsedTags: (() => { try { return session.tags ? (JSON.parse(session.tags) as string[]) : []; } catch { return []; } })(),
+        };
+      }),
+
     create: protectedProcedure
       .input(z.object({
         name: z.string().min(1).max(255),
@@ -214,6 +234,30 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         await deleteSession(input.id, ctx.user.id);
+        return { success: true };
+      }),
+
+    /** Generate a read-only share token for a session. Returns the share URL. */
+    generateShareLink: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const session = await getSessionById(input.id, ctx.user.id);
+        if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
+        // Reuse existing token if already shared
+        const token = session.shareToken ?? randomBytes(32).toString("hex");
+        if (!session.shareToken) {
+          await updateSession(input.id, ctx.user.id, { shareToken: token });
+        }
+        return { token };
+      }),
+
+    /** Revoke the share token for a session (disables the public link). */
+    revokeShareLink: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const session = await getSessionById(input.id, ctx.user.id);
+        if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
+        await updateSession(input.id, ctx.user.id, { shareToken: null });
         return { success: true };
       }),
 
@@ -281,6 +325,7 @@ export const appRouter = router({
         return { aiOutput: parsed };
       }),
   }),
+
   // ─── Action Items ────────────────────────────────────────────────────────────
   actionItems: router({
     /** List all action items for the current user (open and completed), with session context. */
@@ -298,6 +343,49 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await toggleActionItem(input.id, ctx.user.id, input.completed);
         return { success: true };
+      }),
+
+    /** Set or clear the due date (UTC ms timestamp) for an action item. */
+    setDueDate: protectedProcedure
+      .input(z.object({ id: z.number(), dueDate: z.number().nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        await setActionItemDueDate(input.id, ctx.user.id, input.dueDate);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Notes Import (OCR + Paste) ───────────────────────────────────────────
+  notes: router({
+    /** Extract text from an image using GPT-4o vision (OCR for handwritten/printed notes). */
+    extractFromImage: protectedProcedure
+      .input(z.object({
+        imageUrl: z.string().url(), // S3 or data URL of the uploaded image
+      }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "You are an OCR assistant. Extract all text from the provided image exactly as written. Preserve line breaks, bullet points, and structure. Return only the extracted text — no commentary, no formatting changes.",
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image_url" as const,
+                  image_url: { url: input.imageUrl, detail: "high" as const },
+                },
+                {
+                  type: "text" as const,
+                  text: "Extract all text from this image. Preserve the original structure and formatting.",
+                },
+              ],
+            },
+          ],
+        });
+        const text = String(response.choices[0]?.message?.content ?? "").trim();
+        if (!text) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: "No text could be extracted from this image." });
+        return { text };
       }),
   }),
 });

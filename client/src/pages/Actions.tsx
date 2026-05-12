@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { CheckSquare, Square, ExternalLink, Filter, Loader2 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { CheckSquare, Square, ExternalLink, Calendar, X, Loader2 } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
@@ -17,11 +17,50 @@ const PRIORITY_CONFIG = {
 type FilterMode = "all" | "open" | "done";
 type PriorityFilter = "all" | "high" | "medium" | "low";
 
+// ─── Due date helpers ─────────────────────────────────────────────────────────
+function isOverdue(dueDate: number | null | undefined, completed: boolean): boolean {
+  if (!dueDate || completed) return false;
+  return dueDate < Date.now();
+}
+
+function formatDueDate(dueDate: number | null | undefined): string | null {
+  if (!dueDate) return null;
+  const d = new Date(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const dueMidnight = new Date(d);
+  dueMidnight.setHours(0, 0, 0, 0);
+  if (dueMidnight.getTime() === today.getTime()) return "Today";
+  if (dueMidnight.getTime() === tomorrow.getTime()) return "Tomorrow";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Convert UTC ms to YYYY-MM-DD local string for <input type="date">
+function msToDateInput(ms: number | null | undefined): string {
+  if (!ms) return "";
+  const d = new Date(ms);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Convert YYYY-MM-DD local string to UTC ms (start of that day in local time)
+function dateInputToMs(val: string): number | null {
+  if (!val) return null;
+  const [y, m, d] = val.split("-").map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999).getTime(); // end of day
+}
+
 export default function Actions() {
-  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [filterMode, setFilterMode] = useState<FilterMode>("open");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [editingDueDateId, setEditingDueDateId] = useState<number | null>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const utils = trpc.useUtils();
   const { data: items, isLoading } = trpc.actionItems.list.useQuery(undefined, {
@@ -41,9 +80,23 @@ export default function Actions() {
       if (ctx?.prev) utils.actionItems.list.setData(undefined, ctx.prev);
       toast.error("Failed to update action item");
     },
-    onSettled: () => {
-      utils.actionItems.list.invalidate();
+    onSettled: () => utils.actionItems.list.invalidate(),
+  });
+
+  const dueDateMutation = trpc.actionItems.setDueDate.useMutation({
+    onMutate: async ({ id, dueDate }) => {
+      await utils.actionItems.list.cancel();
+      const prev = utils.actionItems.list.getData();
+      utils.actionItems.list.setData(undefined, (old) =>
+        old?.map((item) => (item.id === id ? { ...item, dueDate } : item))
+      );
+      return { prev };
     },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.actionItems.list.setData(undefined, ctx.prev);
+      toast.error("Failed to update due date");
+    },
+    onSettled: () => utils.actionItems.list.invalidate(),
   });
 
   const filtered = useMemo(() => {
@@ -60,6 +113,7 @@ export default function Actions() {
 
   const openCount = items?.filter((i) => !i.completed).length ?? 0;
   const doneCount = items?.filter((i) => i.completed).length ?? 0;
+  const overdueCount = items?.filter((i) => isOverdue(i.dueDate, i.completed)).length ?? 0;
 
   if (authLoading) {
     return (
@@ -90,13 +144,18 @@ export default function Actions() {
       <div style={{ minHeight: "100vh", background: "#0e0e0e", paddingBottom: "90px" }}>
         {/* Header */}
         <div style={{ padding: "20px 20px 0" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "4px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
             <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "26px", fontWeight: 700, color: "oklch(92% 0 0)", margin: 0, letterSpacing: "-0.02em" }}>
               Open Actions
             </h1>
             {openCount > 0 && (
               <span style={{ background: "oklch(68% 0.12 75 / 0.18)", color: "oklch(68% 0.12 75)", border: "1px solid oklch(68% 0.12 75 / 0.4)", borderRadius: "20px", padding: "2px 10px", fontSize: "12px", fontWeight: 700, fontFamily: "var(--font-sans)" }}>
                 {openCount} open
+              </span>
+            )}
+            {overdueCount > 0 && (
+              <span style={{ background: "oklch(55% 0.2 25 / 0.18)", color: "oklch(65% 0.2 25)", border: "1px solid oklch(55% 0.2 25 / 0.4)", borderRadius: "20px", padding: "2px 10px", fontSize: "12px", fontWeight: 700, fontFamily: "var(--font-sans)" }}>
+                {overdueCount} overdue
               </span>
             )}
           </div>
@@ -184,19 +243,23 @@ export default function Actions() {
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {filtered.map((item) => {
                 const cfg = PRIORITY_CONFIG[item.priority];
+                const overdue = isOverdue(item.dueDate, item.completed);
+                const dueDateLabel = formatDueDate(item.dueDate);
+                const isEditingThis = editingDueDateId === item.id;
+
                 return (
                   <div
                     key={item.id}
                     style={{
-                      background: item.completed ? "oklch(11% 0 0)" : "oklch(13% 0 0)",
-                      border: `1px solid ${item.completed ? "oklch(18% 0 0)" : "oklch(20% 0 0)"}`,
+                      background: item.completed ? "oklch(11% 0 0)" : overdue ? "oklch(13% 0.01 25)" : "oklch(13% 0 0)",
+                      border: `1px solid ${item.completed ? "oklch(18% 0 0)" : overdue ? "oklch(35% 0.08 25 / 0.6)" : "oklch(20% 0 0)"}`,
                       borderRadius: "12px",
                       padding: "14px 16px",
                       display: "flex",
                       gap: "12px",
                       alignItems: "flex-start",
                       opacity: item.completed ? 0.55 : 1,
-                      transition: "opacity 0.2s",
+                      transition: "opacity 0.2s, border-color 0.2s",
                     }}
                   >
                     {/* Checkbox */}
@@ -205,15 +268,13 @@ export default function Actions() {
                       disabled={toggleMutation.isPending}
                       style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 0 0", flexShrink: 0, color: item.completed ? "oklch(68% 0.12 75)" : "oklch(35% 0 0)" }}
                     >
-                      {item.completed
-                        ? <CheckSquare size={18} />
-                        : <Square size={18} />}
+                      {item.completed ? <CheckSquare size={18} /> : <Square size={18} />}
                     </button>
 
                     {/* Content */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "14px", color: item.completed ? "oklch(45% 0 0)" : "oklch(88% 0 0)", fontFamily: "var(--font-sans)", fontWeight: 500, textDecoration: item.completed ? "line-through" : "none", flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: "14px", color: item.completed ? "oklch(45% 0 0)" : overdue ? "oklch(75% 0.1 25)" : "oklch(88% 0 0)", fontFamily: "var(--font-sans)", fontWeight: 500, textDecoration: item.completed ? "line-through" : "none", flex: 1, minWidth: 0 }}>
                           {item.task}
                         </span>
                         <span style={{ padding: "2px 7px", borderRadius: "4px", background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color, fontSize: "10px", fontWeight: 700, fontFamily: "var(--font-sans)", letterSpacing: "0.06em", flexShrink: 0 }}>
@@ -227,7 +288,7 @@ export default function Actions() {
                         </p>
                       )}
 
-                      {/* Session context */}
+                      {/* Session context + due date row */}
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                         <button
                           onClick={() => navigate(`/session/${item.sessionId}`)}
@@ -245,6 +306,82 @@ export default function Actions() {
                           <span style={{ fontSize: "11px", color: "oklch(38% 0 0)", fontFamily: "var(--font-sans)" }}>
                             → {item.owner}
                           </span>
+                        )}
+
+                        {/* Due date display / editor */}
+                        {!item.completed && (
+                          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "4px" }}>
+                            {isEditingThis ? (
+                              <input
+                                ref={dateInputRef}
+                                type="date"
+                                defaultValue={msToDateInput(item.dueDate)}
+                                autoFocus
+                                onChange={(e) => {
+                                  const ms = dateInputToMs(e.target.value);
+                                  dueDateMutation.mutate({ id: item.id, dueDate: ms });
+                                  setEditingDueDateId(null);
+                                }}
+                                onBlur={() => setEditingDueDateId(null)}
+                                style={{
+                                  background: "oklch(16% 0 0)",
+                                  border: "1px solid oklch(30% 0 0)",
+                                  borderRadius: "6px",
+                                  color: "oklch(75% 0 0)",
+                                  fontSize: "11px",
+                                  padding: "2px 6px",
+                                  fontFamily: "var(--font-sans)",
+                                  colorScheme: "dark",
+                                }}
+                              />
+                            ) : dueDateLabel ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                                <button
+                                  onClick={() => setEditingDueDateId(item.id)}
+                                  style={{
+                                    display: "flex", alignItems: "center", gap: "3px",
+                                    background: overdue ? "oklch(55% 0.2 25 / 0.15)" : "oklch(16% 0 0)",
+                                    border: `1px solid ${overdue ? "oklch(55% 0.2 25 / 0.5)" : "oklch(26% 0 0)"}`,
+                                    borderRadius: "6px",
+                                    color: overdue ? "oklch(65% 0.2 25)" : "oklch(55% 0 0)",
+                                    fontSize: "11px",
+                                    padding: "2px 6px",
+                                    cursor: "pointer",
+                                    fontFamily: "var(--font-sans)",
+                                    fontWeight: overdue ? 700 : 400,
+                                  }}
+                                >
+                                  <Calendar size={9} />
+                                  {overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
+                                </button>
+                                <button
+                                  onClick={() => dueDateMutation.mutate({ id: item.id, dueDate: null })}
+                                  style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(35% 0 0)", padding: "2px", display: "flex", alignItems: "center" }}
+                                  title="Clear due date"
+                                >
+                                  <X size={10} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingDueDateId(item.id)}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: "3px",
+                                  background: "none",
+                                  border: "1px dashed oklch(22% 0 0)",
+                                  borderRadius: "6px",
+                                  color: "oklch(35% 0 0)",
+                                  fontSize: "11px",
+                                  padding: "2px 6px",
+                                  cursor: "pointer",
+                                  fontFamily: "var(--font-sans)",
+                                }}
+                              >
+                                <Calendar size={9} />
+                                Set due date
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

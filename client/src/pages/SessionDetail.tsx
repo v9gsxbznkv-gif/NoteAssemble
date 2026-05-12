@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import {
   ArrowLeft, Sparkles, Copy, FileDown, Trash2, AlertTriangle,
   CheckCircle2, Eye, Lightbulb, ShieldAlert, FileText, Lock,
-  ChevronDown, ChevronUp, RotateCcw
+  ChevronDown, ChevronUp, RotateCcw, Share2, Link2Off
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
@@ -232,6 +232,30 @@ export default function SessionDetail() {
   const analyzeSession = trpc.sessions.analyze.useMutation();
   const deleteSession = trpc.sessions.delete.useMutation();
   const updateSession = trpc.sessions.update.useMutation();
+  const generateShareLink = trpc.sessions.generateShareLink.useMutation();
+  const revokeShareLink = trpc.sessions.revokeShareLink.useMutation();
+
+  const handleShare = async () => {
+    try {
+      const { token } = await generateShareLink.mutateAsync({ id: sessionId });
+      const url = `${window.location.origin}/share/${token}`;
+      await navigator.clipboard.writeText(url);
+      await utils.sessions.get.invalidate({ id: sessionId });
+      toast.success("Share link copied to clipboard.");
+    } catch {
+      toast.error("Failed to generate share link.");
+    }
+  };
+
+  const handleRevokeShare = async () => {
+    try {
+      await revokeShareLink.mutateAsync({ id: sessionId });
+      await utils.sessions.get.invalidate({ id: sessionId });
+      toast.success("Share link revoked.");
+    } catch {
+      toast.error("Failed to revoke share link.");
+    }
+  };
 
   const handleSaveTags = async (newTags: string[]) => {
     setEditTags(newTags);
@@ -624,11 +648,11 @@ export default function SessionDetail() {
         {aiOutput && (
           <div className="animate-fade-in-up">
             {/* Export actions */}
-            <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" }}>
               <button
                 onClick={handleCopy}
                 style={{
-                  flex: 1, padding: "10px", borderRadius: "8px",
+                  flex: 1, padding: "10px", borderRadius: "8px", minWidth: "80px",
                   background: "oklch(14% 0 0)", border: "1px solid oklch(24% 0 0)",
                   color: "oklch(70% 0 0)", fontSize: "13px", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
@@ -640,7 +664,7 @@ export default function SessionDetail() {
               <button
                 onClick={handlePdfExport}
                 style={{
-                  flex: 1, padding: "10px", borderRadius: "8px",
+                  flex: 1, padding: "10px", borderRadius: "8px", minWidth: "80px",
                   background: "oklch(14% 0 0)", border: "1px solid oklch(24% 0 0)",
                   color: "oklch(70% 0 0)", fontSize: "13px", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
@@ -649,6 +673,37 @@ export default function SessionDetail() {
               >
                 <FileDown size={14} /> Export
               </button>
+              {/* Share button */}
+              {session.shareToken ? (
+                <button
+                  onClick={handleRevokeShare}
+                  disabled={revokeShareLink.isPending}
+                  title="Revoke share link"
+                  style={{
+                    padding: "10px 14px", borderRadius: "8px",
+                    background: "oklch(55% 0.12 75 / 0.12)", border: "1px solid oklch(55% 0.12 75 / 0.35)",
+                    color: "oklch(68% 0.12 75)", fontSize: "13px", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: "6px",
+                    fontFamily: "var(--font-sans)",
+                  }}
+                >
+                  <Link2Off size={14} /> Revoke
+                </button>
+              ) : (
+                <button
+                  onClick={handleShare}
+                  disabled={generateShareLink.isPending}
+                  style={{
+                    padding: "10px 14px", borderRadius: "8px",
+                    background: "oklch(14% 0 0)", border: "1px solid oklch(24% 0 0)",
+                    color: "oklch(70% 0 0)", fontSize: "13px", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: "6px",
+                    fontFamily: "var(--font-sans)",
+                  }}
+                >
+                  <Share2 size={14} /> Share
+                </button>
+              )}
             </div>
 
             {/* Summary */}

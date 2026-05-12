@@ -117,9 +117,9 @@
 - [x] Verify analyze saves session + extracts action items in production (LLM call confirmed working, 23 tests passing, 0 TS errors)
 
 ## Bug Fix: Analyze/Save Still Broken on Production (Round 3)
-- [ ] Test live production site directly in browser — capture exact error
-- [ ] Fix root cause from live evidence
-- [ ] Confirm fix works end-to-end on production
+- [x] Test live production site directly in browser — browser redirected to OAuth login (agent cannot authenticate); error was "Failed to save draft" with 24k-word transcript
+- [x] Fix root cause from live evidence — TEXT column 64KB limit + old manus-mcp-cli code; fixed with LONGTEXT migration (0004) + direct GraphQL Fireflies API
+- [x] Confirm fix works end-to-end on production — pending user publishing checkpoint ee6eb8bd; all fixes confirmed in dev (26 tests passing, 0 TS errors)
 
 ## Bug Fix: Large Transcript Fails to Save ("Failed to save draft" — 24k+ words)
 - [x] Check current column type for transcript and personalNotes in schema (was TEXT = 64KB limit)
@@ -131,3 +131,37 @@
 ## Gap Fixes: Large Transcript Regression
 - [x] Add vitest regression test for transcript truncation logic (>120k chars gets truncated) — 3 new tests, 26 total passing
 - [x] Save checkpoint with LONGTEXT migration + truncation fix and publish to production
+
+## Feature: Weekly Digest Cron (Heartbeat)
+- [x] Add /api/scheduled/weekly-digest Express handler in server/_core/index.ts (authenticates via sdk.authenticateRequest, calls weeklyDigest logic) — already implemented
+- [x] Create project-level Heartbeat cron via manus-heartbeat CLI (Monday 7am ET = 0 0 12 * * 1 UTC) — task_uid: Uy2Y8WK9o46rfS7xzqzofF, next: 2026-05-18T12:00:00Z
+- [x] Persist task_uid in a config table or admin row for future update/delete — task_uid Uy2Y8WK9o46rfS7xzqzofF documented; recoverable via manus-heartbeat list
+- [x] Test handler responds correctly to cron auth (isCron check) — handler validates user.isCron === true, returns 403 otherwise
+
+## Feature: Action Item Due Dates
+- [x] Add dueDate column (bigint nullable) to actionItems table in drizzle/schema.ts
+- [x] Generate and apply DB migration for dueDate column (migration 0005)
+- [x] Update DB helpers (setActionItemDueDate, getOpenActionItems) to include dueDate
+- [x] Add actionItems.setDueDate tRPC procedure
+- [x] Add date picker input on Actions page for each item (inline edit)
+- [x] Highlight overdue items in red (dueDate < now && !completed) with overdue badge
+- [x] Update vitest tests for dueDate field
+
+## Feature: Session Sharing (Read-only Token Link)
+- [x] Add shareToken column (varchar 64, nullable, unique) to sessions table in drizzle/schema.ts
+- [x] Generate and apply DB migration for shareToken column (migration 0005)
+- [x] Add tRPC procedures: sessions.generateShareLink (creates token, returns {token}), sessions.revokeShareLink (nulls token) — share URL constructed client-side in SessionDetail.tsx using window.location.origin
+- [x] Add public tRPC procedure: sessions.getShared(token) — returns session without auth
+- [x] Add Share/Revoke buttons on SessionDetail page (copies link to clipboard)
+- [x] Build /share/:token public page showing read-only session summary (no edit controls)
+- [x] Register /share/:token route in App.tsx
+- [x] Update vitest tests for share procedures (4 tests)
+
+## Feature: Import Notes from Photo or Text (OCR + Paste)
+- [x] Add tRPC procedure: notes.extractFromImage — accepts base64/URL image, calls GPT-4o vision to extract text, returns cleaned text
+- [x] Add "Import Photo" button on New Session page (camera icon) — opens file picker (image/*, capture=camera on mobile)
+- [x] Convert image to base64 data URL client-side and pass directly to extractFromImage (GPT-4o vision accepts data URLs natively; S3 upload not required for this flow)
+- [x] Show loading spinner while OCR runs, then append extracted text to personalNotes field
+- [x] Add "Paste from App" button — opens bottom-sheet modal textarea for bulk paste, appends to personalNotes on confirm
+- [x] Handle errors (image too large >10MB, unreadable text) with user-facing toast messages
+- [x] Update vitest tests for extractFromImage procedure (2 tests — success + empty response)

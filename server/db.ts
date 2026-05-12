@@ -137,6 +137,17 @@ export async function getSessionById(id: number, userId: number): Promise<Sessio
   return result[0];
 }
 
+export async function getSessionByShareToken(token: string): Promise<Session | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.shareToken, token))
+    .limit(1);
+  return result[0];
+}
+
 export async function updateSession(id: number, userId: number, data: Partial<InsertSession>): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -151,7 +162,9 @@ export async function deleteSession(id: number, userId: number): Promise<void> {
 
 // ─── Action Item helpers ──────────────────────────────────────────────────────────────
 
-export async function getOpenActionItems(userId: number): Promise<(ActionItem & { sessionName: string; sessionTags: string | null })[]> {
+export type ActionItemWithSession = ActionItem & { sessionName: string; sessionTags: string | null };
+
+export async function getOpenActionItems(userId: number): Promise<ActionItemWithSession[]> {
   const db = await getDb();
   if (!db) return [];
   // Join with sessions to get session name and tags for context
@@ -165,6 +178,7 @@ export async function getOpenActionItems(userId: number): Promise<(ActionItem & 
       context: actionItems.context,
       owner: actionItems.owner,
       completed: actionItems.completed,
+      dueDate: actionItems.dueDate,
       createdAt: actionItems.createdAt,
       updatedAt: actionItems.updatedAt,
       sessionName: sessions.name,
@@ -197,6 +211,7 @@ export async function upsertActionItemsForSession(
     context: item.context || null,
     owner: item.owner || null,
     completed: false,
+    dueDate: null,
   }));
   await db.insert(actionItems).values(rows);
 }
@@ -207,5 +222,14 @@ export async function toggleActionItem(id: number, userId: number, completed: bo
   await db
     .update(actionItems)
     .set({ completed })
+    .where(and(eq(actionItems.id, id), eq(actionItems.userId, userId)));
+}
+
+export async function setActionItemDueDate(id: number, userId: number, dueDate: number | null): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(actionItems)
+    .set({ dueDate })
     .where(and(eq(actionItems.id, id), eq(actionItems.userId, userId)));
 }
