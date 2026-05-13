@@ -404,7 +404,7 @@ export default function Actions() {
                             {tag}
                           </span>
                         ))}
-                        {item.owner && item.owner !== "Chad" && (
+                        {item.owner && item.owner !== "Not specified" && (
                           <span style={{ fontSize: "11px", color: "oklch(38% 0 0)", fontFamily: "var(--font-sans)" }}>
                             → {item.owner}
                           </span>

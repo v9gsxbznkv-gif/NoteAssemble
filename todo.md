@@ -180,3 +180,16 @@
 - [x] Status filter chips already existed — now wired to combined filter logic
 - [x] Show result count and "Clear filters" button when any filter is active
 - [x] All filtering done client-side (no new backend call needed)
+
+## Feature: Multi-User Public Access
+- [x] Audit all tRPC procedures — all queries scoped to ctx.user.id, no owner-only gates found
+- [x] No OWNER_OPEN_ID checks blocking non-owner users (only used in weeklyDigest for owner's own digest)
+- [x] Rewrote Login.tsx as public landing page with hero, feature grid, and sign-up CTA
+- [x] New users auto-provisioned via OAuth callback — clean empty state guaranteed by userId scoping
+- [x] Fixed hardcoded "Chad" reference in Actions.tsx owner display
+- [x] App title/branding is NoteAssemble consistently across all pages
+
+## Feature: Custom Domain (noteassemble.com via GoDaddy)
+- [ ] Save checkpoint before domain binding
+- [ ] Bind noteassemble.com in Manus Settings → Domains
+- [ ] Provide GoDaddy DNS CNAME/A record instructions to user
