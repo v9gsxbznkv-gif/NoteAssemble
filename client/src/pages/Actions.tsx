@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { CheckSquare, Square, ExternalLink, Calendar, X, Loader2 } from "lucide-react";
+import { CheckSquare, Square, ExternalLink, Calendar, X, Loader2, Search, ChevronDown } from "lucide-react";
 import { useState, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
@@ -59,6 +59,8 @@ export default function Actions() {
   const [, navigate] = useLocation();
   const [filterMode, setFilterMode] = useState<FilterMode>("open");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sessionFilter, setSessionFilter] = useState<string>("all");
   const [editingDueDateId, setEditingDueDateId] = useState<number | null>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -99,17 +101,36 @@ export default function Actions() {
     onSettled: () => utils.actionItems.list.invalidate(),
   });
 
+  // Unique session names for the session dropdown
+  const sessionNames = useMemo(() => {
+    if (!items) return [];
+    const names = Array.from(new Set(items.map((i) => i.sessionName).filter(Boolean)));
+    return names.sort();
+  }, [items]);
+
+  const hasActiveFilters = searchQuery.trim() !== "" || sessionFilter !== "all" || priorityFilter !== "all" || filterMode !== "open";
+
   const filtered = useMemo(() => {
     if (!items) return [];
+    const q = searchQuery.trim().toLowerCase();
     return items.filter((item) => {
       const modeMatch =
         filterMode === "all" ? true :
         filterMode === "open" ? !item.completed :
         item.completed;
       const priorityMatch = priorityFilter === "all" || item.priority === priorityFilter;
-      return modeMatch && priorityMatch;
+      const sessionMatch = sessionFilter === "all" || item.sessionName === sessionFilter;
+      const searchMatch = !q || item.task.toLowerCase().includes(q) || (item.owner ?? "").toLowerCase().includes(q) || item.sessionName.toLowerCase().includes(q) || (item.context ?? "").toLowerCase().includes(q);
+      return modeMatch && priorityMatch && sessionMatch && searchMatch;
     });
-  }, [items, filterMode, priorityFilter]);
+  }, [items, filterMode, priorityFilter, searchQuery, sessionFilter]);
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setSessionFilter("all");
+    setPriorityFilter("all");
+    setFilterMode("open");
+  };
 
   const openCount = items?.filter((i) => !i.completed).length ?? 0;
   const doneCount = items?.filter((i) => i.completed).length ?? 0;
@@ -162,6 +183,70 @@ export default function Actions() {
           <p style={{ color: "oklch(45% 0 0)", fontFamily: "var(--font-sans)", fontSize: "13px", margin: "0 0 20px" }}>
             Action items extracted from all your sessions.
           </p>
+
+          {/* Search bar */}
+          <div style={{ position: "relative", marginBottom: "10px" }}>
+            <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "oklch(40% 0 0)", pointerEvents: "none" }} />
+            <input
+              type="text"
+              placeholder="Search tasks, sessions, owners..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: "100%",
+                background: "oklch(13% 0 0)",
+                border: "1px solid oklch(22% 0 0)",
+                borderRadius: "10px",
+                padding: "9px 12px 9px 34px",
+                fontSize: "13px",
+                color: "oklch(88% 0 0)",
+                fontFamily: "var(--font-sans)",
+                outline: "none",
+                boxSizing: "border-box",
+                transition: "border-color 0.15s",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "oklch(68% 0.12 75 / 0.5)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "oklch(22% 0 0)")}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "oklch(40% 0 0)", display: "flex", alignItems: "center" }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Session filter dropdown */}
+          {sessionNames.length > 1 && (
+            <div style={{ position: "relative", marginBottom: "10px" }}>
+              <select
+                value={sessionFilter}
+                onChange={(e) => setSessionFilter(e.target.value)}
+                style={{
+                  width: "100%",
+                  background: "oklch(13% 0 0)",
+                  border: `1px solid ${sessionFilter !== "all" ? "oklch(68% 0.12 75 / 0.5)" : "oklch(22% 0 0)"}`,
+                  borderRadius: "10px",
+                  padding: "8px 32px 8px 12px",
+                  fontSize: "13px",
+                  color: sessionFilter !== "all" ? "oklch(68% 0.12 75)" : "oklch(55% 0 0)",
+                  fontFamily: "var(--font-sans)",
+                  outline: "none",
+                  appearance: "none",
+                  cursor: "pointer",
+                  boxSizing: "border-box",
+                }}
+              >
+                <option value="all">All Sessions</option>
+                {sessionNames.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "oklch(40% 0 0)", pointerEvents: "none" }} />
+            </div>
+          )}
 
           {/* Filter row */}
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
@@ -218,6 +303,21 @@ export default function Actions() {
           </div>
         </div>
 
+        {/* Result count + clear filters */}
+        {hasActiveFilters && (
+          <div style={{ padding: "0 20px 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "12px", color: "oklch(45% 0 0)", fontFamily: "var(--font-sans)" }}>
+              {filtered.length} {filtered.length === 1 ? "item" : "items"} found
+            </span>
+            <button
+              onClick={clearAllFilters}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(55% 0.12 75)", fontSize: "12px", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: "4px" }}
+            >
+              <X size={11} /> Clear filters
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         <div style={{ padding: "0 20px" }}>
           {isLoading ? (
@@ -229,9 +329,11 @@ export default function Actions() {
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <CheckSquare size={36} style={{ color: "oklch(25% 0 0)", margin: "0 auto 12px", display: "block" }} />
               <p style={{ color: "oklch(40% 0 0)", fontFamily: "var(--font-sans)", fontSize: "14px", margin: 0 }}>
-                {filterMode === "open" ? "No open action items. You're clear." :
-                 filterMode === "done" ? "No completed items yet." :
-                 "No action items found."}
+                {searchQuery || sessionFilter !== "all"
+                  ? "No items match your search."
+                  : filterMode === "open" ? "No open action items. You're clear."
+                  : filterMode === "done" ? "No completed items yet."
+                  : "No action items found."}
               </p>
               {items?.length === 0 && (
                 <p style={{ color: "oklch(35% 0 0)", fontFamily: "var(--font-sans)", fontSize: "12px", marginTop: "8px" }}>

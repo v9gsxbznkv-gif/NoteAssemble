@@ -172,3 +172,11 @@
 - [x] Tag editing already existed (TagQuickAdd + remove chips) — confirmed working
 - [x] Wire tag edit to updateSession tRPC mutation — already wired via handleSaveTags
 - [x] Show visual feedback (toast "Name updated" / "Tags updated") after update
+
+## Feature: Actions Page Search & Filter Bar
+- [x] Add keyword search input (filters by task text, owner, session name, context)
+- [x] Add session filter dropdown (filter by session name, auto-populated from items)
+- [x] Priority filter chips already existed — now wired to combined filter logic
+- [x] Status filter chips already existed — now wired to combined filter logic
+- [x] Show result count and "Clear filters" button when any filter is active
+- [x] All filtering done client-side (no new backend call needed)
