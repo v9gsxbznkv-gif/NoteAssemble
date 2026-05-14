@@ -193,3 +193,10 @@
 - [ ] Save checkpoint before domain binding
 - [ ] Bind noteassemble.com in Manus Settings → Domains
 - [ ] Provide GoDaddy DNS CNAME/A record instructions to user
+
+## Rename: meetingmind → NoteAssemble
+- [x] Update package.json name field (meetingmind → noteassemble)
+- [x] manifest.json name/short_name already NoteAssemble; updated description to match public copy
+- [x] VITE_APP_TITLE is a built-in platform secret (not editable via code); app title in UI is controlled by Manus platform settings
+- [x] Full sweep: zero remaining meetingmind/MeetingMind references in any user-visible file
+- [x] 35 tests passing, 0 TypeScript errors after rename

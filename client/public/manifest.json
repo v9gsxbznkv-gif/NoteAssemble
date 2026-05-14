@@ -1,7 +1,7 @@
 {
   "name": "NoteAssemble",
   "short_name": "NoteAssemble",
-  "description": "Executive intelligence tool for capturing and analyzing meeting insights.",
+  "description": "Turn your meeting transcripts and notes into structured summaries, decisions, and action items — powered by AI.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0e0e0e",
