@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ─── NoteAssemble Executive Dark Theme ─────────────────────────────── */
+/* ─── NoteAssemble Theme ─────────────────────────────────────────────── */
 @theme inline {
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -33,8 +33,39 @@
   --font-serif: "Playfair Display", Georgia, serif;
 }
 
+/* ─── Light Theme ────────────────────────────────────────────────────── */
 :root {
-  /* NoteAssemble always uses dark theme */
+  --primary: oklch(52% 0.14 75);
+  --primary-foreground: oklch(99% 0 0);
+  --background: oklch(98% 0 0);
+  --foreground: oklch(12% 0 0);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(12% 0 0);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(12% 0 0);
+  --secondary: oklch(94% 0 0);
+  --secondary-foreground: oklch(20% 0 0);
+  --muted: oklch(94% 0 0);
+  --muted-foreground: oklch(48% 0 0);
+  --accent: oklch(52% 0.14 75);
+  --accent-foreground: oklch(99% 0 0);
+  --destructive: oklch(55% 0.2 25);
+  --destructive-foreground: oklch(99% 0 0);
+  --border: oklch(88% 0 0);
+  --input: oklch(92% 0 0);
+  --ring: oklch(52% 0.14 75);
+  --sidebar: oklch(96% 0 0);
+  --sidebar-foreground: oklch(12% 0 0);
+  --sidebar-accent: oklch(92% 0 0);
+  --sidebar-accent-foreground: oklch(12% 0 0);
+  --sidebar-border: oklch(88% 0 0);
+  --sidebar-ring: oklch(52% 0.14 75);
+  --sidebar-primary: oklch(52% 0.14 75);
+  --sidebar-primary-foreground: oklch(99% 0 0);
+}
+
+/* ─── Dark Theme ─────────────────────────────────────────────────────── */
+.dark {
   --primary: oklch(68% 0.12 75);
   --primary-foreground: oklch(8% 0 0);
   --background: oklch(8% 0 0);
@@ -62,29 +93,6 @@
   --sidebar-ring: oklch(68% 0.12 75);
   --sidebar-primary: oklch(68% 0.12 75);
   --sidebar-primary-foreground: oklch(8% 0 0);
-}
-
-/* Dark class mirrors root since we're always dark */
-.dark {
-  --primary: oklch(68% 0.12 75);
-  --primary-foreground: oklch(8% 0 0);
-  --background: oklch(8% 0 0);
-  --foreground: oklch(92% 0 0);
-  --card: oklch(11% 0 0);
-  --card-foreground: oklch(92% 0 0);
-  --popover: oklch(13% 0 0);
-  --popover-foreground: oklch(92% 0 0);
-  --secondary: oklch(16% 0 0);
-  --secondary-foreground: oklch(85% 0 0);
-  --muted: oklch(16% 0 0);
-  --muted-foreground: oklch(55% 0 0);
-  --accent: oklch(68% 0.12 75);
-  --accent-foreground: oklch(8% 0 0);
-  --destructive: oklch(55% 0.2 25);
-  --destructive-foreground: oklch(95% 0 0);
-  --border: oklch(20% 0 0);
-  --input: oklch(16% 0 0);
-  --ring: oklch(68% 0.12 75);
 }
 
 @layer base {
@@ -121,7 +129,7 @@
   }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: oklch(30% 0 0); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   textarea { resize: vertical; }
 }
 
@@ -138,25 +146,40 @@
     min-height: 0;
     min-width: 0;
   }
-  /* Priority badges */
+  /* Priority badges — work in both themes */
   .badge-high {
+    background: oklch(55% 0.18 25 / 0.15);
+    color: oklch(50% 0.18 25);
+    border: 1px solid oklch(55% 0.18 25 / 0.35);
+  }
+  .dark .badge-high {
     background: oklch(45% 0.18 25 / 0.25);
     color: oklch(75% 0.15 25);
     border: 1px solid oklch(55% 0.18 25 / 0.4);
   }
   .badge-medium {
+    background: oklch(52% 0.12 75 / 0.12);
+    color: oklch(45% 0.12 75);
+    border: 1px solid oklch(52% 0.12 75 / 0.3);
+  }
+  .dark .badge-medium {
     background: oklch(55% 0.12 75 / 0.2);
     color: oklch(75% 0.12 75);
     border: 1px solid oklch(68% 0.12 75 / 0.35);
   }
   .badge-low {
+    background: oklch(50% 0.1 160 / 0.12);
+    color: oklch(40% 0.1 160);
+    border: 1px solid oklch(50% 0.1 160 / 0.3);
+  }
+  .dark .badge-low {
     background: oklch(45% 0.1 160 / 0.2);
     color: oklch(70% 0.1 160);
     border: 1px solid oklch(55% 0.1 160 / 0.35);
   }
   /* Skeleton shimmer */
   .skeleton {
-    background: linear-gradient(90deg, oklch(14% 0 0) 25%, oklch(18% 0 0) 50%, oklch(14% 0 0) 75%);
+    background: linear-gradient(90deg, var(--secondary) 25%, var(--muted) 50%, var(--secondary) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: var(--radius-md);

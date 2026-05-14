@@ -200,3 +200,10 @@
 - [x] VITE_APP_TITLE is a built-in platform secret (not editable via code); app title in UI is controlled by Manus platform settings
 - [x] Full sweep: zero remaining meetingmind/MeetingMind references in any user-visible file
 - [x] 35 tests passing, 0 TypeScript errors after rename
+
+## Feature: System Light/Dark Theme
+- [ ] Add light theme CSS variables to index.css (.light block)
+- [ ] Change ThemeProvider defaultTheme from "dark" to "system"
+- [ ] Replace hardcoded oklch dark colors with semantic CSS variable tokens across all pages
+- [ ] Verify Login landing page, Dashboard, SessionDetail, Actions, NewSession, History all render correctly in both light and dark
+- [ ] Run tests to confirm nothing broken

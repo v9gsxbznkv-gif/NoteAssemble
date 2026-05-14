@@ -53,7 +53,7 @@ function SectionHeader({ icon, title, count }: { icon: React.ReactNode; title: s
           fontFamily: "var(--font-serif)",
           fontSize: "15px",
           fontWeight: 600,
-          color: "oklch(88% 0 0)",
+          color: "var(--foreground)",
           margin: 0,
           flex: 1,
         }}
@@ -65,8 +65,8 @@ function SectionHeader({ icon, title, count }: { icon: React.ReactNode; title: s
           style={{
             fontSize: "11px",
             fontWeight: 600,
-            color: "oklch(55% 0 0)",
-            background: "oklch(18% 0 0)",
+            color: "var(--muted-foreground)",
+            background: "var(--secondary)",
             padding: "2px 8px",
             borderRadius: "20px",
             fontFamily: "var(--font-sans)",
@@ -82,7 +82,7 @@ function SectionHeader({ icon, title, count }: { icon: React.ReactNode; title: s
 function PriorityBadge({ priority }: { priority: string }) {
   const styles: Record<string, { bg: string; color: string; border: string }> = {
     high: { bg: "oklch(45% 0.18 25 / 0.25)", color: "oklch(75% 0.15 25)", border: "oklch(55% 0.18 25 / 0.4)" },
-    medium: { bg: "oklch(55% 0.12 75 / 0.2)", color: "oklch(75% 0.12 75)", border: "oklch(68% 0.12 75 / 0.35)" },
+    medium: { bg: "color-mix(in oklch, var(--primary) 15%, transparent)", color: "var(--primary)", border: "color-mix(in oklch, var(--primary) 35%, transparent)" },
     low: { bg: "oklch(45% 0.1 160 / 0.2)", color: "oklch(70% 0.1 160)", border: "oklch(55% 0.1 160 / 0.35)" },
   };
   const s = styles[priority] ?? styles.medium;
@@ -138,7 +138,7 @@ function WatchTypeBadge({ type }: { type: string }) {
 function SourceBadge({ source }: { source: string }) {
   const labels: Record<string, { label: string; color: string }> = {
     transcript: { label: "Transcript", color: "oklch(60% 0.1 220)" },
-    notes: { label: "Private Notes", color: "oklch(68% 0.12 75)" },
+    notes: { label: "Private Notes", color: "var(--primary)" },
     synthesis: { label: "Synthesis", color: "oklch(65% 0.1 280)" },
   };
   const s = labels[source] ?? labels.synthesis;
@@ -163,8 +163,8 @@ function TagQuickAdd({ currentTags, onAdd }: { currentTags: string[]; onAdd: (ta
         style={{
           display: "inline-flex", alignItems: "center", gap: "4px",
           padding: "4px 10px", borderRadius: "20px",
-          background: "oklch(14% 0 0)", border: "1px dashed oklch(28% 0 0)",
-          color: "oklch(45% 0 0)", fontSize: "12px", fontFamily: "var(--font-sans)", cursor: "pointer",
+          background: "var(--secondary)", border: "1px dashed var(--border)",
+          color: "var(--muted-foreground)", fontSize: "12px", fontFamily: "var(--font-sans)", cursor: "pointer",
         }}
       >
         + Tag
@@ -176,7 +176,7 @@ function TagQuickAdd({ currentTags, onAdd }: { currentTags: string[]; onAdd: (ta
     <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", alignItems: "center" }}>
       {available.map((tag) => (
         <button key={tag} onClick={() => { onAdd(tag); setOpen(false); }}
-          style={{ padding: "4px 10px", borderRadius: "20px", background: "oklch(16% 0 0)", border: "1px solid oklch(26% 0 0)", color: "oklch(60% 0 0)", fontSize: "12px", fontFamily: "var(--font-sans)", cursor: "pointer" }}
+          style={{ padding: "4px 10px", borderRadius: "20px", background: "var(--input)", border: "1px solid var(--border)", color: "var(--muted-foreground)", fontSize: "12px", fontFamily: "var(--font-sans)", cursor: "pointer" }}
         >{tag}</button>
       ))}
       <input
@@ -188,9 +188,9 @@ function TagQuickAdd({ currentTags, onAdd }: { currentTags: string[]; onAdd: (ta
           if (e.key === "Enter" && custom.trim()) { onAdd(custom.trim()); setCustom(""); setOpen(false); }
           if (e.key === "Escape") setOpen(false);
         }}
-        style={{ width: "80px", background: "oklch(13% 0 0)", border: "1px solid oklch(28% 0 0)", borderRadius: "6px", padding: "4px 8px", fontSize: "12px", color: "oklch(88% 0 0)", fontFamily: "var(--font-sans)", outline: "none" }}
+        style={{ width: "80px", background: "var(--popover)", border: "1px solid var(--border)", borderRadius: "6px", padding: "4px 8px", fontSize: "12px", color: "var(--foreground)", fontFamily: "var(--font-sans)", outline: "none" }}
       />
-      <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(40% 0 0)", fontSize: "12px", fontFamily: "var(--font-sans)" }}>×</button>
+      <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: "12px", fontFamily: "var(--font-sans)" }}>×</button>
     </div>
   );
 }
@@ -412,8 +412,8 @@ export default function SessionDetail() {
     return (
       <AppShell hideNav>
         <div className="container py-6 text-center">
-          <p style={{ color: "oklch(55% 0 0)", fontFamily: "var(--font-sans)" }}>Session not found.</p>
-          <button onClick={() => navigate("/history")} style={{ color: "oklch(68% 0.12 75)", marginTop: "12px", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+          <p style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-sans)" }}>Session not found.</p>
+          <button onClick={() => navigate("/history")} style={{ color: "var(--primary)", marginTop: "12px", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
             ← Back to History
           </button>
         </div>
@@ -429,8 +429,8 @@ export default function SessionDetail() {
           <button
             onClick={() => navigate("/history")}
             style={{
-              background: "oklch(14% 0 0)",
-              border: "1px solid oklch(22% 0 0)",
+              background: "var(--secondary)",
+              border: "1px solid var(--border)",
               borderRadius: "10px",
               width: "38px",
               height: "38px",
@@ -442,7 +442,7 @@ export default function SessionDetail() {
               marginTop: "2px",
             }}
           >
-            <ArrowLeft size={18} style={{ color: "oklch(65% 0 0)" }} />
+            <ArrowLeft size={18} style={{ color: "var(--muted-foreground)" }} />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             {editingName ? (
@@ -457,8 +457,8 @@ export default function SessionDetail() {
                 }}
                 style={{
                   fontFamily: "var(--font-serif)", fontSize: "20px", fontWeight: 600,
-                  color: "oklch(92% 0 0)", background: "oklch(16% 0 0)",
-                  border: "1px solid oklch(68% 0.12 75 / 0.5)", borderRadius: "8px",
+                  color: "var(--foreground)", background: "var(--input)",
+                  border: "1px solid color-mix(in oklch, var(--primary) 50%, transparent)", borderRadius: "8px",
                   padding: "4px 10px", outline: "none", width: "100%", lineHeight: 1.3,
                 }}
               />
@@ -468,22 +468,22 @@ export default function SessionDetail() {
                 title="Click to edit name"
                 style={{
                   fontFamily: "var(--font-serif)", fontSize: "20px", fontWeight: 600,
-                  color: "oklch(92% 0 0)", margin: 0, lineHeight: 1.3,
+                  color: "var(--foreground)", margin: 0, lineHeight: 1.3,
                   cursor: "text", borderRadius: "6px", padding: "2px 4px", marginLeft: "-4px",
                   transition: "background 0.15s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(18% 0 0)")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--secondary)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 {session.name}
               </h1>
             )}
-            <p style={{ fontSize: "12px", color: "oklch(45% 0 0)", margin: "4px 0 0", fontFamily: "var(--font-sans)" }}>
+            <p style={{ fontSize: "12px", color: "var(--muted-foreground)", margin: "4px 0 0", fontFamily: "var(--font-sans)" }}>
               {new Date(session.createdAt).toLocaleDateString("en-US", {
                 weekday: "short", month: "short", day: "numeric", year: "numeric",
               })}
               {session.status === "analyzed" && (
-                <span style={{ color: "oklch(68% 0.12 75)", marginLeft: "8px" }}>· Analyzed</span>
+                <span style={{ color: "var(--primary)", marginLeft: "8px" }}>· Analyzed</span>
               )}
             </p>
           </div>
@@ -495,7 +495,7 @@ export default function SessionDetail() {
               border: "none",
               cursor: "pointer",
               padding: "6px",
-              color: "oklch(40% 0 0)",
+              color: "var(--muted-foreground)",
             }}
           >
             <Trash2 size={18} />
@@ -510,14 +510,14 @@ export default function SessionDetail() {
               style={{
                 display: "inline-flex", alignItems: "center", gap: "4px",
                 padding: "4px 10px", borderRadius: "20px",
-                background: "oklch(68% 0.12 75 / 0.12)", border: "1px solid oklch(68% 0.12 75 / 0.35)",
-                color: "oklch(68% 0.12 75)", fontSize: "12px", fontFamily: "var(--font-sans)",
+                background: "color-mix(in oklch, var(--primary) 12%, transparent)", border: "1px solid color-mix(in oklch, var(--primary) 35%, transparent)",
+                color: "var(--primary)", fontSize: "12px", fontFamily: "var(--font-sans)",
               }}
             >
               {tag}
               <button
                 onClick={() => handleSaveTags(editTags.filter((t) => t !== tag))}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", color: "oklch(68% 0.12 75 / 0.7)" }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", color: "color-mix(in oklch, var(--primary) 70%, transparent)" }}
               >
                 <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </button>
@@ -531,20 +531,20 @@ export default function SessionDetail() {
         {showDeleteConfirm && (
           <div
             style={{
-              background: "oklch(13% 0 0)",
+              background: "var(--popover)",
               border: "1px solid oklch(55% 0.2 25 / 0.3)",
               borderRadius: "12px",
               padding: "16px",
               marginBottom: "16px",
             }}
           >
-            <p style={{ fontSize: "14px", color: "oklch(80% 0 0)", fontFamily: "var(--font-sans)", marginBottom: "12px" }}>
+            <p style={{ fontSize: "14px", color: "var(--foreground)", fontFamily: "var(--font-sans)", marginBottom: "12px" }}>
               Delete this session permanently?
             </p>
             <div style={{ display: "flex", gap: "8px" }}>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                style={{ flex: 1, padding: "10px", borderRadius: "8px", background: "oklch(18% 0 0)", border: "1px solid oklch(25% 0 0)", color: "oklch(70% 0 0)", fontSize: "13px", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                style={{ flex: 1, padding: "10px", borderRadius: "8px", background: "var(--secondary)", border: "1px solid var(--border)", color: "var(--foreground)", fontSize: "13px", cursor: "pointer", fontFamily: "var(--font-sans)" }}
               >
                 Cancel
               </button>
@@ -565,8 +565,8 @@ export default function SessionDetail() {
             onClick={() => setShowTranscript(!showTranscript)}
             style={{
               width: "100%",
-              background: "oklch(13% 0 0)",
-              border: "1px solid oklch(22% 0 0)",
+              background: "var(--popover)",
+              border: "1px solid var(--border)",
               borderRadius: showTranscript ? "10px 10px 0 0" : "10px",
               padding: "12px 14px",
               display: "flex",
@@ -576,11 +576,11 @@ export default function SessionDetail() {
               marginBottom: showTranscript ? "0" : "8px",
             }}
           >
-            <FileText size={14} style={{ color: "oklch(55% 0 0)" }} />
-            <span style={{ flex: 1, fontSize: "13px", color: "oklch(65% 0 0)", fontFamily: "var(--font-sans)", textAlign: "left" }}>
+            <FileText size={14} style={{ color: "var(--muted-foreground)" }} />
+            <span style={{ flex: 1, fontSize: "13px", color: "var(--muted-foreground)", fontFamily: "var(--font-sans)", textAlign: "left" }}>
               Transcript {editTranscript ? `(${editTranscript.length} chars)` : "(empty)"}
             </span>
-            {showTranscript ? <ChevronUp size={14} style={{ color: "oklch(45% 0 0)" }} /> : <ChevronDown size={14} style={{ color: "oklch(45% 0 0)" }} />}
+            {showTranscript ? <ChevronUp size={14} style={{ color: "var(--muted-foreground)" }} /> : <ChevronDown size={14} style={{ color: "var(--muted-foreground)" }} />}
           </button>
           {showTranscript && (
             <textarea
@@ -589,13 +589,13 @@ export default function SessionDetail() {
               rows={6}
               style={{
                 width: "100%",
-                background: "oklch(11% 0 0)",
-                border: "1px solid oklch(22% 0 0)",
+                background: "var(--card)",
+                border: "1px solid var(--border)",
                 borderTop: "none",
                 borderRadius: "0 0 10px 10px",
                 padding: "12px 14px",
                 fontSize: "13px",
-                color: "oklch(80% 0 0)",
+                color: "var(--foreground)",
                 fontFamily: "var(--font-sans)",
                 outline: "none",
                 resize: "vertical",
@@ -610,8 +610,8 @@ export default function SessionDetail() {
             onClick={() => setShowNotes(!showNotes)}
             style={{
               width: "100%",
-              background: "oklch(11.5% 0.005 75)",
-              border: "1px solid oklch(68% 0.12 75 / 0.2)",
+              background: "var(--card)",
+              border: "1px solid color-mix(in oklch, var(--primary) 20%, transparent)",
               borderRadius: showNotes ? "10px 10px 0 0" : "10px",
               padding: "12px 14px",
               display: "flex",
@@ -620,11 +620,11 @@ export default function SessionDetail() {
               cursor: "pointer",
             }}
           >
-            <Lock size={14} style={{ color: "oklch(68% 0.12 75)" }} />
-            <span style={{ flex: 1, fontSize: "13px", color: "oklch(68% 0.12 75)", fontFamily: "var(--font-sans)", textAlign: "left" }}>
+            <Lock size={14} style={{ color: "var(--primary)" }} />
+            <span style={{ flex: 1, fontSize: "13px", color: "var(--primary)", fontFamily: "var(--font-sans)", textAlign: "left" }}>
               Private Notes {editNotes ? `(${editNotes.length} chars)` : "(empty)"}
             </span>
-            {showNotes ? <ChevronUp size={14} style={{ color: "oklch(68% 0.12 75)" }} /> : <ChevronDown size={14} style={{ color: "oklch(68% 0.12 75)" }} />}
+            {showNotes ? <ChevronUp size={14} style={{ color: "var(--primary)" }} /> : <ChevronDown size={14} style={{ color: "var(--primary)" }} />}
           </button>
           {showNotes && (
             <textarea
@@ -633,13 +633,13 @@ export default function SessionDetail() {
               rows={5}
               style={{
                 width: "100%",
-                background: "oklch(10.5% 0.005 75)",
-                border: "1px solid oklch(68% 0.12 75 / 0.2)",
+                background: "var(--card)",
+                border: "1px solid color-mix(in oklch, var(--primary) 20%, transparent)",
                 borderTop: "none",
                 borderRadius: "0 0 10px 10px",
                 padding: "12px 14px",
                 fontSize: "13px",
-                color: "oklch(80% 0 0)",
+                color: "var(--foreground)",
                 fontFamily: "var(--font-sans)",
                 outline: "none",
                 resize: "vertical",
@@ -655,7 +655,7 @@ export default function SessionDetail() {
           disabled={isAnalyzing}
           className="w-full mb-6 transition-all duration-200 active:scale-[0.98]"
           style={{
-            background: isAnalyzing ? "oklch(50% 0.08 75)" : "oklch(68% 0.12 75)",
+            background: isAnalyzing ? "color-mix(in oklch, var(--primary) 70%, transparent)" : "var(--primary)",
             border: "none",
             borderRadius: "10px",
             padding: "13px",
@@ -664,7 +664,7 @@ export default function SessionDetail() {
             justifyContent: "center",
             gap: "8px",
             cursor: isAnalyzing ? "not-allowed" : "pointer",
-            boxShadow: isAnalyzing ? "none" : "0 4px 16px oklch(68% 0.12 75 / 0.2)",
+            boxShadow: isAnalyzing ? "none" : "0 4px 16px color-mix(in oklch, var(--primary) 20%, transparent)",
           }}
         >
           {isAnalyzing ? (
@@ -691,8 +691,8 @@ export default function SessionDetail() {
                 onClick={handleCopy}
                 style={{
                   flex: 1, padding: "10px", borderRadius: "8px", minWidth: "80px",
-                  background: "oklch(14% 0 0)", border: "1px solid oklch(24% 0 0)",
-                  color: "oklch(70% 0 0)", fontSize: "13px", cursor: "pointer",
+                  background: "var(--secondary)", border: "1px solid var(--border)",
+                  color: "var(--foreground)", fontSize: "13px", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
                   fontFamily: "var(--font-sans)",
                 }}
@@ -703,8 +703,8 @@ export default function SessionDetail() {
                 onClick={handlePdfExport}
                 style={{
                   flex: 1, padding: "10px", borderRadius: "8px", minWidth: "80px",
-                  background: "oklch(14% 0 0)", border: "1px solid oklch(24% 0 0)",
-                  color: "oklch(70% 0 0)", fontSize: "13px", cursor: "pointer",
+                  background: "var(--secondary)", border: "1px solid var(--border)",
+                  color: "var(--foreground)", fontSize: "13px", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
                   fontFamily: "var(--font-sans)",
                 }}
@@ -719,8 +719,8 @@ export default function SessionDetail() {
                   title="Revoke share link"
                   style={{
                     padding: "10px 14px", borderRadius: "8px",
-                    background: "oklch(55% 0.12 75 / 0.12)", border: "1px solid oklch(55% 0.12 75 / 0.35)",
-                    color: "oklch(68% 0.12 75)", fontSize: "13px", cursor: "pointer",
+                    background: "color-mix(in oklch, var(--primary) 10%, transparent)", border: "1px solid color-mix(in oklch, var(--primary) 30%, transparent)",
+                    color: "var(--primary)", fontSize: "13px", cursor: "pointer",
                     display: "flex", alignItems: "center", gap: "6px",
                     fontFamily: "var(--font-sans)",
                   }}
@@ -733,8 +733,8 @@ export default function SessionDetail() {
                   disabled={generateShareLink.isPending}
                   style={{
                     padding: "10px 14px", borderRadius: "8px",
-                    background: "oklch(14% 0 0)", border: "1px solid oklch(24% 0 0)",
-                    color: "oklch(70% 0 0)", fontSize: "13px", cursor: "pointer",
+                    background: "var(--secondary)", border: "1px solid var(--border)",
+                    color: "var(--foreground)", fontSize: "13px", cursor: "pointer",
                     display: "flex", alignItems: "center", gap: "6px",
                     fontFamily: "var(--font-sans)",
                   }}
@@ -747,18 +747,18 @@ export default function SessionDetail() {
             {/* Summary */}
             <div
               style={{
-                background: "oklch(11% 0 0)",
-                border: "1px solid oklch(68% 0.12 75 / 0.2)",
+                background: "var(--card)",
+                border: "1px solid color-mix(in oklch, var(--primary) 20%, transparent)",
                 borderRadius: "12px",
                 padding: "16px",
                 marginBottom: "12px",
               }}
             >
               <SectionHeader
-                icon={<Eye size={15} style={{ color: "oklch(68% 0.12 75)" }} />}
+                icon={<Eye size={15} style={{ color: "var(--primary)" }} />}
                 title="Executive Summary"
               />
-              <p style={{ fontSize: "14px", color: "oklch(82% 0 0)", lineHeight: 1.7, margin: 0, fontFamily: "var(--font-sans)" }}>
+              <p style={{ fontSize: "14px", color: "var(--foreground)", lineHeight: 1.7, margin: 0, fontFamily: "var(--font-sans)" }}>
                 {aiOutput.summary}
               </p>
             </div>
@@ -767,8 +767,8 @@ export default function SessionDetail() {
             {aiOutput.keyDecisions?.length > 0 && (
               <div
                 style={{
-                  background: "oklch(11% 0 0)",
-                  border: "1px solid oklch(22% 0 0)",
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "12px",
                   padding: "16px",
                   marginBottom: "12px",
@@ -782,8 +782,8 @@ export default function SessionDetail() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {aiOutput.keyDecisions.map((d, i) => (
                     <div key={i} style={{ paddingLeft: "12px", borderLeft: "2px solid oklch(65% 0.1 160 / 0.4)" }}>
-                      <p style={{ fontSize: "13px", fontWeight: 600, color: "oklch(85% 0 0)", margin: "0 0 3px", fontFamily: "var(--font-sans)" }}>{d.decision}</p>
-                      {d.context && <p style={{ fontSize: "12px", color: "oklch(50% 0 0)", margin: 0, fontFamily: "var(--font-sans)" }}>{d.context}</p>}
+                      <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--foreground)", margin: "0 0 3px", fontFamily: "var(--font-sans)" }}>{d.decision}</p>
+                      {d.context && <p style={{ fontSize: "12px", color: "var(--muted-foreground)", margin: 0, fontFamily: "var(--font-sans)" }}>{d.context}</p>}
                     </div>
                   ))}
                 </div>
@@ -794,33 +794,33 @@ export default function SessionDetail() {
             {aiOutput.actionItems?.length > 0 && (
               <div
                 style={{
-                  background: "oklch(11% 0 0)",
-                  border: "1px solid oklch(22% 0 0)",
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "12px",
                   padding: "16px",
                   marginBottom: "12px",
                 }}
               >
                 <SectionHeader
-                  icon={<CheckCircle2 size={15} style={{ color: "oklch(68% 0.12 75)" }} />}
+                  icon={<CheckCircle2 size={15} style={{ color: "var(--primary)" }} />}
                   title="Action Items"
                   count={aiOutput.actionItems.length}
                 />
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {aiOutput.actionItems.map((a, i) => (
                     <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                      <div style={{ width: "20px", height: "20px", borderRadius: "50%", border: "1.5px solid oklch(30% 0 0)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
-                        <span style={{ fontSize: "9px", color: "oklch(45% 0 0)", fontFamily: "var(--font-sans)" }}>{i + 1}</span>
+                      <div style={{ width: "20px", height: "20px", borderRadius: "50%", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" }}>
+                        <span style={{ fontSize: "9px", color: "var(--muted-foreground)", fontFamily: "var(--font-sans)" }}>{i + 1}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px", flexWrap: "wrap" }}>
                           <PriorityBadge priority={a.priority} />
                           {a.owner && a.owner !== "Not specified" && (
-                            <span style={{ fontSize: "11px", color: "oklch(50% 0 0)", fontFamily: "var(--font-sans)" }}>→ {a.owner}</span>
+                            <span style={{ fontSize: "11px", color: "var(--muted-foreground)", fontFamily: "var(--font-sans)" }}>→ {a.owner}</span>
                           )}
                         </div>
-                        <p style={{ fontSize: "13px", fontWeight: 600, color: "oklch(85% 0 0)", margin: "0 0 3px", fontFamily: "var(--font-sans)" }}>{a.task}</p>
-                        {a.context && <p style={{ fontSize: "12px", color: "oklch(50% 0 0)", margin: 0, fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>{a.context}</p>}
+                        <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--foreground)", margin: "0 0 3px", fontFamily: "var(--font-sans)" }}>{a.task}</p>
+                        {a.context && <p style={{ fontSize: "12px", color: "var(--muted-foreground)", margin: 0, fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>{a.context}</p>}
                       </div>
                     </div>
                   ))}
@@ -832,22 +832,22 @@ export default function SessionDetail() {
             {aiOutput.insights?.length > 0 && (
               <div
                 style={{
-                  background: "oklch(11% 0 0)",
-                  border: "1px solid oklch(22% 0 0)",
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "12px",
                   padding: "16px",
                   marginBottom: "12px",
                 }}
               >
                 <SectionHeader
-                  icon={<Lightbulb size={15} style={{ color: "oklch(68% 0.12 75)" }} />}
+                  icon={<Lightbulb size={15} style={{ color: "var(--primary)" }} />}
                   title="Insights"
                   count={aiOutput.insights.length}
                 />
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {aiOutput.insights.map((ins, i) => (
-                    <div key={i} style={{ paddingLeft: "12px", borderLeft: "2px solid oklch(68% 0.12 75 / 0.3)" }}>
-                      <p style={{ fontSize: "13px", color: "oklch(82% 0 0)", margin: "0 0 4px", fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>{ins.insight}</p>
+                    <div key={i} style={{ paddingLeft: "12px", borderLeft: "2px solid color-mix(in oklch, var(--primary) 30%, transparent)" }}>
+                      <p style={{ fontSize: "13px", color: "var(--foreground)", margin: "0 0 4px", fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>{ins.insight}</p>
                       <SourceBadge source={ins.source} />
                     </div>
                   ))}
@@ -859,7 +859,7 @@ export default function SessionDetail() {
             {aiOutput.watchItems?.length > 0 && (
               <div
                 style={{
-                  background: "oklch(11% 0 0)",
+                  background: "var(--card)",
                   border: "1px solid oklch(55% 0.15 45 / 0.2)",
                   borderRadius: "12px",
                   padding: "16px",
@@ -877,7 +877,7 @@ export default function SessionDetail() {
                       <AlertTriangle size={14} style={{ color: "oklch(65% 0.15 45)", flexShrink: 0, marginTop: "2px" }} />
                       <div style={{ flex: 1 }}>
                         <WatchTypeBadge type={w.type} />
-                        <p style={{ fontSize: "13px", color: "oklch(80% 0 0)", margin: "4px 0 0", fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>{w.item}</p>
+                        <p style={{ fontSize: "13px", color: "var(--foreground)", margin: "4px 0 0", fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>{w.item}</p>
                       </div>
                     </div>
                   ))}
@@ -892,16 +892,16 @@ export default function SessionDetail() {
           <div
             className="flex flex-col items-center justify-center py-12 text-center animate-fade-in-up"
             style={{
-              background: "oklch(11% 0 0)",
-              border: "1px solid oklch(20% 0 0)",
+              background: "var(--card)",
+              border: "1px solid var(--border)",
               borderRadius: "12px",
             }}
           >
-            <Sparkles size={32} style={{ color: "oklch(40% 0 0)", marginBottom: "12px" }} />
-            <p style={{ fontFamily: "var(--font-serif)", fontSize: "16px", color: "oklch(60% 0 0)", marginBottom: "6px" }}>
+            <Sparkles size={32} style={{ color: "var(--muted-foreground)", marginBottom: "12px" }} />
+            <p style={{ fontFamily: "var(--font-serif)", fontSize: "16px", color: "var(--muted-foreground)", marginBottom: "6px" }}>
               Ready to analyze
             </p>
-            <p style={{ fontSize: "13px", color: "oklch(40% 0 0)", fontFamily: "var(--font-sans)", maxWidth: "200px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: "13px", color: "var(--muted-foreground)", fontFamily: "var(--font-sans)", maxWidth: "200px", lineHeight: 1.5 }}>
               Add your transcript and/or notes above, then hit Analyze.
             </p>
           </div>

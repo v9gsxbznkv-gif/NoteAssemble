@@ -11,7 +11,7 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: "#0e0e0e", paddingTop: "env(safe-area-inset-top, 0px)" }}
+      style={{ background: "var(--background)", paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <main className="flex-1 overflow-y-auto">
         {children}

@@ -15,10 +15,10 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: "oklch(9% 0 0 / 0.95)",
+        background: "color-mix(in oklch, var(--background) 92%, transparent)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
-        borderTop: "1px solid oklch(22% 0 0)",
+        borderTop: "1px solid var(--border)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
