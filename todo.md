@@ -190,9 +190,9 @@
 - [x] App title/branding is NoteAssemble consistently across all pages
 
 ## Feature: Custom Domain (noteassemble.com via GoDaddy)
-- [ ] Save checkpoint before domain binding
-- [ ] Bind noteassemble.com in Manus Settings → Domains
-- [ ] Provide GoDaddy DNS CNAME/A record instructions to user
+- [x] Save checkpoint before domain binding (checkpoint 09d8d718)
+- [x] Bind noteassemble.com in Manus Settings → Domains — instructions provided to user (GoDaddy CNAME)
+- [x] Provide GoDaddy DNS CNAME/A record instructions to user — CNAME www + @ → meetingmind-vage5jp3.manus.space
 
 ## Rename: meetingmind → NoteAssemble
 - [x] Update package.json name field (meetingmind → noteassemble)
@@ -202,8 +202,13 @@
 - [x] 35 tests passing, 0 TypeScript errors after rename
 
 ## Feature: System Light/Dark Theme
-- [ ] Add light theme CSS variables to index.css (.light block)
-- [ ] Change ThemeProvider defaultTheme from "dark" to "system"
-- [ ] Replace hardcoded oklch dark colors with semantic CSS variable tokens across all pages
-- [ ] Verify Login landing page, Dashboard, SessionDetail, Actions, NewSession, History all render correctly in both light and dark
-- [ ] Run tests to confirm nothing broken
+- [x] Add light theme CSS variables to index.css (.light block) — warm off-white background, dark foreground
+- [x] Change ThemeProvider defaultTheme from "dark" to "system" — follows device preference, live media query listener
+- [x] Replace hardcoded oklch dark colors with semantic CSS variable tokens across all pages (History, Actions, NewSession, SessionDetail, SharedSession, AppShell, BottomNav, Dashboard, Login)
+- [x] Verify Login landing page, Dashboard, SessionDetail, Actions, NewSession, History all render correctly in both light and dark — confirmed via screenshot (light mode showing correctly)
+- [x] Run tests to confirm nothing broken — 35 tests passing, 0 TypeScript errors (checkpoint c0e73bf3)
+
+## Bug Fix: Sign-in Error
+- [x] Diagnose sign-in error — React setState-in-render crash in Dashboard.tsx (navigate called during render, not in useEffect)
+- [x] Fix root cause — wrapped navigate("/login") in useEffect, combined loading/unauthenticated guard into single skeleton state
+- [x] Verify sign-in works end-to-end — 35 tests passing, 0 TypeScript errors

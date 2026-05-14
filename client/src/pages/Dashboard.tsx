@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Search, Plus, ChevronRight, Brain, Calendar, Tag } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
 
@@ -176,7 +176,13 @@ export default function Dashboard() {
     });
   }, [sessions, activeTag]);
 
-  if (authLoading) {
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [authLoading, isAuthenticated, navigate]);
+
+  if (authLoading || !isAuthenticated) {
     return (
       <AppShell>
         <div className="container py-8">
@@ -187,8 +193,6 @@ export default function Dashboard() {
       </AppShell>
     );
   }
-
-  if (!isAuthenticated) { navigate("/login"); return null; }
 
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const hour = new Date().getHours();
