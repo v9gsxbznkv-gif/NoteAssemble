@@ -1,4 +1,4 @@
-import { Home, PlusCircle, Clock, CheckSquare } from "lucide-react";
+import { Home, PlusCircle, Clock, CheckSquare, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 const tabs = [
@@ -6,6 +6,7 @@ const tabs = [
   { path: "/new", label: "New", icon: PlusCircle },
   { path: "/actions", label: "Actions", icon: CheckSquare },
   { path: "/history", label: "History", icon: Clock },
+  { path: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function BottomNav() {

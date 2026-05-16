@@ -61,6 +61,15 @@ vi.mock("./db", () => ({
   ]),
   upsertActionItemsForSession: vi.fn().mockResolvedValue(undefined),
   toggleActionItem: vi.fn().mockResolvedValue(undefined),
+  setActionItemDueDate: vi.fn().mockResolvedValue(undefined),
+  getSessionByShareToken: vi.fn().mockResolvedValue(undefined),
+  getUserIntegrationKeys: vi.fn().mockResolvedValue({
+    firefliesApiKey: 'test-fireflies-key',
+    notionApiKey: null,
+    otterApiKey: null,
+  }),
+  setUserIntegrationKey: vi.fn().mockResolvedValue(undefined),
+  clearUserIntegrationKey: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Mock LLM ─────────────────────────────────────────────────────────────────

@@ -225,6 +225,33 @@ export async function toggleActionItem(id: number, userId: number, completed: bo
     .where(and(eq(actionItems.id, id), eq(actionItems.userId, userId)));
 }
 
+// ─── User integration key helpers ───────────────────────────────────────────────
+
+type IntegrationField = 'firefliesApiKey' | 'notionApiKey' | 'otterApiKey';
+
+export async function setUserIntegrationKey(userId: number, field: IntegrationField, apiKey: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(users).set({ [field]: apiKey }).where(eq(users.id, userId));
+}
+
+export async function getUserIntegrationKeys(userId: number): Promise<{ firefliesApiKey: string | null; notionApiKey: string | null; otterApiKey: string | null }> {
+  const db = await getDb();
+  if (!db) return { firefliesApiKey: null, notionApiKey: null, otterApiKey: null };
+  const result = await db
+    .select({ firefliesApiKey: users.firefliesApiKey, notionApiKey: users.notionApiKey, otterApiKey: users.otterApiKey })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return result[0] ?? { firefliesApiKey: null, notionApiKey: null, otterApiKey: null };
+}
+
+export async function clearUserIntegrationKey(userId: number, field: IntegrationField): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(users).set({ [field]: null }).where(eq(users.id, userId));
+}
+
 export async function setActionItemDueDate(id: number, userId: number, dueDate: number | null): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

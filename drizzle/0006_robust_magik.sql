@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `firefliesApiKey` varchar(255);

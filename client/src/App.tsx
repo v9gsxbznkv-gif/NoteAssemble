@@ -11,6 +11,7 @@ import History from "./pages/History";
 import SessionDetail from "./pages/SessionDetail";
 import Actions from "./pages/Actions";
 import SharedSession from "./pages/SharedSession";
+import Settings from "./pages/Settings";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/session/:id" component={SessionDetail} />
       <Route path="/actions" component={Actions} />
       <Route path="/share/:token" component={SharedSession} />
+      <Route path="/settings" component={Settings} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -33,17 +35,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="system" switchable={true}>
         <TooltipProvider>
-          <Toaster
-            theme="dark"
-            toastOptions={{
-              style: {
-                background: "oklch(13% 0 0)",
-                border: "1px solid oklch(22% 0 0)",
-                color: "oklch(88% 0 0)",
-                fontFamily: "var(--font-sans)",
-              },
-            }}
-          />
+          <Toaster theme="system" />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

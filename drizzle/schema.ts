@@ -10,6 +10,9 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  firefliesApiKey: varchar("firefliesApiKey", { length: 255 }), // user's own Fireflies API key
+  notionApiKey: varchar("notionApiKey", { length: 255 }), // user's Notion integration token
+  otterApiKey: varchar("otterApiKey", { length: 255 }), // user's Otter.ai API key
 });
 
 export type User = typeof users.$inferSelect;

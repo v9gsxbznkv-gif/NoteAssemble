@@ -212,3 +212,33 @@
 - [x] Diagnose sign-in error — React setState-in-render crash in Dashboard.tsx (navigate called during render, not in useEffect)
 - [x] Fix root cause — wrapped navigate("/login") in useEffect, combined loading/unauthenticated guard into single skeleton state
 - [x] Verify sign-in works end-to-end — 35 tests passing, 0 TypeScript errors
+
+## Feature: Per-User Fireflies API Key
+- [ ] Add firefliesApiKey column (varchar 255, nullable) to users table in drizzle/schema.ts
+- [ ] Generate and apply DB migration for firefliesApiKey column
+- [ ] Add DB helpers: setUserFirefliesKey(userId, key), getUserFirefliesKey(userId), clearUserFirefliesKey(userId)
+- [ ] Add tRPC procedures: user.setFirefliesKey (protected), user.getFirefliesKey (protected, returns masked key), user.clearFirefliesKey (protected)
+- [ ] Update Fireflies import procedure to use ctx.user's firefliesApiKey instead of server env FIREFLIES_API_KEY
+- [ ] Show clear error if user has no Fireflies key set (prompt them to add it in Settings)
+- [ ] Build Settings page with Fireflies API key input (masked, show/hide toggle, save/clear buttons)
+- [ ] Add Settings link in BottomNav or AppShell header
+- [ ] Write vitest tests for new procedures
+
+## Feature: Per-User Integrations (Fireflies, Notion, Otter.ai, Rev)
+- [x] Add firefliesApiKey, notionApiKey, otterApiKey columns to users table
+- [x] Generate and apply DB migrations (0006 firefliesApiKey, 0007 notionApiKey + otterApiKey)
+- [x] Add DB helpers: setUserIntegrationKey, getUserIntegrationKeys, clearUserIntegrationKey
+- [x] Add tRPC procedures: integrations.getKeys (masked), integrations.setKey, integrations.clearKey
+- [x] Update Fireflies procedures to use user's own firefliesApiKey (PRECONDITION_FAILED error if not set)
+- [x] Notion import: API key saved; direct import UI deferred to next iteration (requires Notion OAuth or page picker)
+- [x] Otter.ai import: API key saved; direct import UI deferred to next iteration
+- [x] Rev import: users can paste Rev transcript text via existing Paste from App button
+- [x] Build Settings/Integrations page with connection cards for each service (key input, masked display, connect/disconnect)
+- [x] Add Settings icon/link in BottomNav (5th tab)
+- [x] Updated vitest mocks for integration procedures — 35 tests passing
+
+## Deferred: Full Import Flows for Notion, Otter.ai, Rev
+- [ ] Notion import: server procedure to list/search pages via Notion API, UI page picker, import selected page content into session transcript/notes
+- [ ] Otter.ai import: server procedure to list transcripts via Otter API, UI to select and import transcript text
+- [ ] Rev import: accept Rev transcript text or URL, parse/fetch content, populate session form with loading/error states
+- [ ] Vitest coverage for all three import procedures

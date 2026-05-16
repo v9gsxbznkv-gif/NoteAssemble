@@ -7,13 +7,16 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import {
+  clearUserIntegrationKey,
   createSession,
   deleteSession,
   getOpenActionItems,
   getSessionById,
   getSessionByShareToken,
   getSessionsByUser,
+  getUserIntegrationKeys,
   setActionItemDueDate,
+  setUserIntegrationKey,
   toggleActionItem,
   updateSession,
   upsertActionItemsForSession,
@@ -96,59 +99,107 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Integrations (per-user API keys) ────────────────────────────────────────
+  integrations: router({
+    /** Get the user's connected integration keys (masked for display). */
+    getKeys: protectedProcedure.query(async ({ ctx }) => {
+      const keys = await getUserIntegrationKeys(ctx.user.id);
+      // Mask keys: show last 4 chars only
+      const mask = (k: string | null) => k ? `${'•'.repeat(Math.max(0, k.length - 4))}${k.slice(-4)}` : null;
+      return {
+        fireflies: { connected: !!keys.firefliesApiKey, masked: mask(keys.firefliesApiKey) },
+        notion: { connected: !!keys.notionApiKey, masked: mask(keys.notionApiKey) },
+        otter: { connected: !!keys.otterApiKey, masked: mask(keys.otterApiKey) },
+      };
+    }),
+
+    /** Save an integration API key for the current user. */
+    setKey: protectedProcedure
+      .input(z.object({
+        service: z.enum(['fireflies', 'notion', 'otter']),
+        apiKey: z.string().min(1).max(255),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const fieldMap = { fireflies: 'firefliesApiKey', notion: 'notionApiKey', otter: 'otterApiKey' } as const;
+        await setUserIntegrationKey(ctx.user.id, fieldMap[input.service], input.apiKey);
+        return { success: true };
+      }),
+
+    /** Remove an integration API key for the current user. */
+    clearKey: protectedProcedure
+      .input(z.object({ service: z.enum(['fireflies', 'notion', 'otter']) }))
+      .mutation(async ({ ctx, input }) => {
+        const fieldMap = { fireflies: 'firefliesApiKey', notion: 'notionApiKey', otter: 'otterApiKey' } as const;
+        await clearUserIntegrationKey(ctx.user.id, fieldMap[input.service]);
+        return { success: true };
+      }),
+  }),
+
   // ─── Fireflies ─────────────────────────────────────────────────────────────
   fireflies: router({
-    /** List the 10 most recent meetings. */
-    recent: protectedProcedure.query(async () => {
+    /** List the 10 most recent meetings using the user's own Fireflies key. */
+    recent: protectedProcedure.query(async ({ ctx }) => {
+      const keys = await getUserIntegrationKeys(ctx.user.id);
+      if (!keys.firefliesApiKey) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Connect your Fireflies account in Settings → Integrations to import meetings.',
+        });
+      }
       try {
-        const meetings = await getRecentMeetings(10);
+        const meetings = await getRecentMeetings(10, keys.firefliesApiKey);
         return meetings.map((m) => ({
           id: m.id,
-          title: m.title ?? "Untitled Meeting",
+          title: m.title ?? 'Untitled Meeting',
           date: m.date ?? null,
         }));
       } catch (err) {
-        console.error("[Fireflies] recent error:", err);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch recent Fireflies meetings",
-        });
+        console.error('[Fireflies] recent error:', err);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch recent Fireflies meetings' });
       }
     }),
 
     /** Search meetings by keyword in the title. */
     search: protectedProcedure
       .input(z.object({ keyword: z.string().min(1) }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.firefliesApiKey) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Connect your Fireflies account in Settings → Integrations to import meetings.',
+          });
+        }
         try {
-          const meetings = await searchMeetings(input.keyword, 10);
+          const meetings = await searchMeetings(input.keyword, 10, keys.firefliesApiKey);
           return meetings.map((m) => ({
             id: m.id,
-            title: m.title ?? "Untitled Meeting",
+            title: m.title ?? 'Untitled Meeting',
             date: m.date ?? null,
           }));
         } catch (err) {
-          console.error("[Fireflies] search error:", err);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to search Fireflies meetings",
-          });
+          console.error('[Fireflies] search error:', err);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to search Fireflies meetings' });
         }
       }),
 
     /** Fetch the full transcript text for a given meeting ID. */
     getTranscript: protectedProcedure
       .input(z.object({ transcriptId: z.string() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.firefliesApiKey) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Connect your Fireflies account in Settings → Integrations to import meetings.',
+          });
+        }
         try {
-          const { title, text } = await getTranscriptText(input.transcriptId);
+          const { title, text } = await getTranscriptText(input.transcriptId, keys.firefliesApiKey);
           return { transcript: text, title };
         } catch (err) {
-          console.error("[Fireflies] getTranscript error:", err);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to fetch transcript from Fireflies",
-          });
+          console.error('[Fireflies] getTranscript error:', err);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch transcript from Fireflies' });
         }
       }),
   }),
