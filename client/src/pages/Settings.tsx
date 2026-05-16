@@ -43,8 +43,8 @@ const API_SERVICE_INFO: Record<ApiService, {
     name: "Granola",
     description: "Import AI-enhanced meeting notes directly from Granola.",
     placeholder: "Enter your Granola personal API key",
-    docsUrl: "https://granola.ai",
-    howTo: "Open Granola → Settings → Connectors → API Keys → create a new key",
+    docsUrl: "https://app.granola.ai/settings/api",
+    howTo: "Open Granola → Settings → API Keys → create a new personal API key",
   },
   zoom: {
     name: "Zoom",
