@@ -287,3 +287,10 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Append extracted text to personalNotes field (with file name as header)
 - [x] Handle errors: unsupported format, file too large, extraction failure (toast messages)
 - [x] Write vitest tests for file extraction endpoint (4 tests: no file, TXT, MD, short text 422)
+
+## Feature: Auto-Generate Session Title
+- [x] Add sessions.generateTitle tRPC procedure — takes transcript + personalNotes, calls LLM to produce a short descriptive title (5-8 words max), returns { title }
+- [x] On Analyze: if name field is blank, call generateTitle first, populate name, then proceed with create + analyze
+- [x] On Save Draft: if name field is blank, call generateTitle first, populate name, then save
+- [x] Show subtle loading indicator in the name field while title is being generated
+- [x] Write vitest tests for generateTitle procedure (5 tests: LLM title, notes-only, empty inputs, quote stripping, empty LLM response)

@@ -408,6 +408,44 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    /** Generate a short descriptive title from transcript/notes when the user hasn't typed one. */
+    generateTitle: protectedProcedure
+      .input(z.object({
+        transcript: z.string().optional(),
+        personalNotes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const transcript = (input.transcript ?? "").trim();
+        const notes = (input.personalNotes ?? "").trim();
+
+        if (!transcript && !notes) {
+          return { title: "Untitled Session" };
+        }
+
+        // Feed a short excerpt (first 2000 chars) to keep the call fast
+        const excerpt = [
+          transcript ? `TRANSCRIPT EXCERPT:\n${transcript.slice(0, 1500)}` : "",
+          notes ? `NOTES EXCERPT:\n${notes.slice(0, 500)}` : "",
+        ].filter(Boolean).join("\n\n");
+
+        try {
+          const response = await invokeLLM({
+            messages: [
+              {
+                role: "system",
+                content: "You are a concise meeting title generator. Given a short excerpt from a meeting transcript and/or personal notes, return ONLY a short, descriptive title for the session — 4 to 7 words, title case, no punctuation at the end, no quotes. Nothing else.",
+              },
+              { role: "user", content: excerpt },
+            ],
+          });
+          const raw = String(response.choices[0]?.message?.content ?? "").trim();
+          const title = raw.replace(/^["']|["']$/g, "").trim();
+          return { title: title || "Untitled Session" };
+        } catch {
+          return { title: "Untitled Session" };
+        }
+      }),
+
     analyze: protectedProcedure
       .input(z.object({
         id: z.number(),

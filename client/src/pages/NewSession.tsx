@@ -354,9 +354,32 @@ export default function NewSession() {
     if (!authLoading && !isAuthenticated) navigate("/login");
   }, [isAuthenticated, authLoading, navigate]);
 
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const utils = trpc.useUtils();
   const createSession = trpc.sessions.create.useMutation();
   const analyzeSession = trpc.sessions.analyze.useMutation();
+  const generateTitle = trpc.sessions.generateTitle.useMutation();
+
+  /** Returns the name to use — auto-generates one if the field is blank. */
+  const resolveTitle = async (): Promise<string | null> => {
+    if (name.trim()) return name.trim();
+    if (!transcript.trim() && !personalNotes.trim()) {
+      toast.error("Please add a transcript or personal notes before saving.");
+      return null;
+    }
+    setIsGeneratingTitle(true);
+    try {
+      const { title } = await generateTitle.mutateAsync({ transcript, personalNotes });
+      setName(title);
+      return title;
+    } catch {
+      const fallback = "Untitled Session";
+      setName(fallback);
+      return fallback;
+    } finally {
+      setIsGeneratingTitle(false);
+    }
+  };
 
   const handleFirefliesSelect = (importedTranscript: string, meetingTitle: string) => {
     setTranscript(importedTranscript);
@@ -364,14 +387,15 @@ export default function NewSession() {
   };
 
   const handleAnalyze = async () => {
-    if (!name.trim()) { toast.error("Please give this session a name."); return; }
     if (!transcript.trim() && !personalNotes.trim()) {
       toast.error("Please add a transcript or personal notes before analyzing.");
       return;
     }
     setIsAnalyzing(true);
     try {
-      const { id } = await createSession.mutateAsync({ name: name.trim(), transcript, personalNotes, tags });
+      const resolvedName = await resolveTitle();
+      if (!resolvedName) { setIsAnalyzing(false); return; }
+      const { id } = await createSession.mutateAsync({ name: resolvedName, transcript, personalNotes, tags });
       await analyzeSession.mutateAsync({ id, transcript, personalNotes });
       await utils.sessions.list.invalidate();
       toast.success("Analysis complete.");
@@ -384,9 +408,10 @@ export default function NewSession() {
   };
 
   const handleSaveDraft = async () => {
-    if (!name.trim()) { toast.error("Please give this session a name."); return; }
+    const resolvedName = await resolveTitle();
+    if (!resolvedName) return;
     try {
-      const { id } = await createSession.mutateAsync({ name: name.trim(), transcript, personalNotes, tags });
+      const { id } = await createSession.mutateAsync({ name: resolvedName, transcript, personalNotes, tags });
       await utils.sessions.list.invalidate();
       toast.success("Draft saved.");
       navigate(`/session/${id}`);
@@ -419,15 +444,21 @@ export default function NewSession() {
           <label style={{ display: "block", fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted-foreground)", marginBottom: "8px", fontFamily: "var(--font-sans)" }}>
             Session Name
           </label>
-          <input
-            type="text"
-            placeholder="e.g. Sunday Staff Meeting"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ width: "100%", background: "var(--popover)", border: "1px solid var(--border)", borderRadius: "10px", padding: "13px 14px", fontSize: "15px", color: "var(--foreground)", fontFamily: "var(--font-serif)", outline: "none", transition: "border-color 0.2s" }}
-            onFocus={(e) => (e.target.style.borderColor = "color-mix(in oklch, var(--primary) 60%, transparent)")}
-            onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
-          />
+          <div style={{ position: "relative" }}>
+            <input
+              type="text"
+              placeholder={isGeneratingTitle ? "Generating title…" : "e.g. Sunday Staff Meeting (auto-generated if blank)"}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isGeneratingTitle}
+              style={{ width: "100%", background: "var(--popover)", border: "1px solid var(--border)", borderRadius: "10px", padding: "13px 14px", paddingRight: isGeneratingTitle ? "42px" : "14px", fontSize: "15px", color: "var(--foreground)", fontFamily: "var(--font-serif)", outline: "none", transition: "border-color 0.2s", opacity: isGeneratingTitle ? 0.6 : 1 }}
+              onFocus={(e) => (e.target.style.borderColor = "color-mix(in oklch, var(--primary) 60%, transparent)")}
+              onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+            />
+            {isGeneratingTitle && (
+              <Loader2 size={16} style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", animation: "spin 0.8s linear infinite", color: "var(--muted-foreground)" }} />
+            )}
+          </div>
         </div>
 
         {/* Tags */}

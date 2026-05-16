@@ -254,3 +254,57 @@ describe("notes.extractFromImage", () => {
     await expect(caller.notes.extractFromImage({ imageUrl: "https://example.com/blank.jpg" })).rejects.toThrow("No text could be extracted");
   });
 });
+
+// ─── Feature: Auto-Generate Session Title ─────────────────────────────────────
+describe("sessions.generateTitle", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns a title from the LLM when transcript is provided", async () => {
+    const ctx = makeCtx();
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ message: { content: "Church Campus Expansion Planning Session" } }],
+    } as ReturnType<typeof invokeLLM> extends Promise<infer T> ? T : never);
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.sessions.generateTitle({ transcript: "We discussed the new campus build timeline and budget.", personalNotes: "" });
+    expect(result.title).toBe("Church Campus Expansion Planning Session");
+    expect(invokeLLM).toHaveBeenCalledOnce();
+  });
+
+  it("returns a title from the LLM when only personalNotes is provided", async () => {
+    const ctx = makeCtx();
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ message: { content: "Real Estate Investment Review" } }],
+    } as ReturnType<typeof invokeLLM> extends Promise<infer T> ? T : never);
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.sessions.generateTitle({ transcript: "", personalNotes: "Reviewed the STR property numbers with the team." });
+    expect(result.title).toBe("Real Estate Investment Review");
+  });
+
+  it("returns 'Untitled Session' when both inputs are empty", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.sessions.generateTitle({ transcript: "", personalNotes: "" });
+    expect(result.title).toBe("Untitled Session");
+    expect(invokeLLM).not.toHaveBeenCalled();
+  });
+
+  it("strips surrounding quotes from LLM output", async () => {
+    const ctx = makeCtx();
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ message: { content: "\"Weekly Staff Sync\"" } }],
+    } as ReturnType<typeof invokeLLM> extends Promise<infer T> ? T : never);
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.sessions.generateTitle({ transcript: "Weekly staff meeting notes.", personalNotes: "" });
+    expect(result.title).toBe("Weekly Staff Sync");
+  });
+
+  it("falls back to 'Untitled Session' when LLM returns empty string", async () => {
+    const ctx = makeCtx();
+    vi.mocked(invokeLLM).mockResolvedValueOnce({
+      choices: [{ message: { content: "   " } }],
+    } as ReturnType<typeof invokeLLM> extends Promise<infer T> ? T : never);
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.sessions.generateTitle({ transcript: "Some content here.", personalNotes: "" });
+    expect(result.title).toBe("Untitled Session");
+  });
+});
