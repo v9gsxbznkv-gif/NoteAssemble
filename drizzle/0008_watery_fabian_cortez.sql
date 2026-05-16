@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `granolaApiKey` varchar(255);

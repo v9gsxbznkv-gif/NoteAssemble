@@ -227,7 +227,7 @@ export async function toggleActionItem(id: number, userId: number, completed: bo
 
 // ─── User integration key helpers ───────────────────────────────────────────────
 
-type IntegrationField = 'firefliesApiKey' | 'notionApiKey' | 'otterApiKey';
+type IntegrationField = 'firefliesApiKey' | 'notionApiKey' | 'otterApiKey' | 'granolaApiKey' | 'zoomApiKey' | 'teamsApiKey';
 
 export async function setUserIntegrationKey(userId: number, field: IntegrationField, apiKey: string): Promise<void> {
   const db = await getDb();
@@ -235,15 +235,15 @@ export async function setUserIntegrationKey(userId: number, field: IntegrationFi
   await db.update(users).set({ [field]: apiKey }).where(eq(users.id, userId));
 }
 
-export async function getUserIntegrationKeys(userId: number): Promise<{ firefliesApiKey: string | null; notionApiKey: string | null; otterApiKey: string | null }> {
+export async function getUserIntegrationKeys(userId: number): Promise<{ firefliesApiKey: string | null; notionApiKey: string | null; otterApiKey: string | null; granolaApiKey: string | null; zoomApiKey: string | null; teamsApiKey: string | null }> {
   const db = await getDb();
-  if (!db) return { firefliesApiKey: null, notionApiKey: null, otterApiKey: null };
+  if (!db) return { firefliesApiKey: null, notionApiKey: null, otterApiKey: null, granolaApiKey: null, zoomApiKey: null, teamsApiKey: null };
   const result = await db
-    .select({ firefliesApiKey: users.firefliesApiKey, notionApiKey: users.notionApiKey, otterApiKey: users.otterApiKey })
+    .select({ firefliesApiKey: users.firefliesApiKey, notionApiKey: users.notionApiKey, otterApiKey: users.otterApiKey, granolaApiKey: users.granolaApiKey, zoomApiKey: users.zoomApiKey, teamsApiKey: users.teamsApiKey })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  return result[0] ?? { firefliesApiKey: null, notionApiKey: null, otterApiKey: null };
+  return result[0] ?? { firefliesApiKey: null, notionApiKey: null, otterApiKey: null, granolaApiKey: null, zoomApiKey: null, teamsApiKey: null };
 }
 
 export async function clearUserIntegrationKey(userId: number, field: IntegrationField): Promise<void> {

@@ -110,28 +110,124 @@ export const appRouter = router({
         fireflies: { connected: !!keys.firefliesApiKey, masked: mask(keys.firefliesApiKey) },
         notion: { connected: !!keys.notionApiKey, masked: mask(keys.notionApiKey) },
         otter: { connected: !!keys.otterApiKey, masked: mask(keys.otterApiKey) },
+        granola: { connected: !!keys.granolaApiKey, masked: mask(keys.granolaApiKey) },
+        zoom: { connected: !!keys.zoomApiKey, masked: mask(keys.zoomApiKey) },
+        teams: { connected: !!keys.teamsApiKey, masked: mask(keys.teamsApiKey) },
       };
     }),
 
     /** Save an integration API key for the current user. */
     setKey: protectedProcedure
       .input(z.object({
-        service: z.enum(['fireflies', 'notion', 'otter']),
+        service: z.enum(['fireflies', 'notion', 'otter', 'granola', 'zoom', 'teams']),
         apiKey: z.string().min(1).max(255),
       }))
       .mutation(async ({ ctx, input }) => {
-        const fieldMap = { fireflies: 'firefliesApiKey', notion: 'notionApiKey', otter: 'otterApiKey' } as const;
+        const fieldMap = { fireflies: 'firefliesApiKey', notion: 'notionApiKey', otter: 'otterApiKey', granola: 'granolaApiKey', zoom: 'zoomApiKey', teams: 'teamsApiKey' } as const;
         await setUserIntegrationKey(ctx.user.id, fieldMap[input.service], input.apiKey);
         return { success: true };
       }),
 
     /** Remove an integration API key for the current user. */
     clearKey: protectedProcedure
-      .input(z.object({ service: z.enum(['fireflies', 'notion', 'otter']) }))
+      .input(z.object({ service: z.enum(['fireflies', 'notion', 'otter', 'granola', 'zoom', 'teams']) }))
       .mutation(async ({ ctx, input }) => {
-        const fieldMap = { fireflies: 'firefliesApiKey', notion: 'notionApiKey', otter: 'otterApiKey' } as const;
+        const fieldMap = { fireflies: 'firefliesApiKey', notion: 'notionApiKey', otter: 'otterApiKey', granola: 'granolaApiKey', zoom: 'zoomApiKey', teams: 'teamsApiKey' } as const;
         await clearUserIntegrationKey(ctx.user.id, fieldMap[input.service]);
         return { success: true };
+      }),
+  }),
+
+  // ─── Notion Import ────────────────────────────────────────────────────────────
+  notion: router({
+    /** Fetch a Notion page's content by URL or page ID using the user's integration token. */
+    importPage: protectedProcedure
+      .input(z.object({ pageUrl: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.notionApiKey) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Connect your Notion account in Settings → Integrations first.',
+          });
+        }
+        // Extract page ID from URL (e.g. https://notion.so/My-Page-abc123def456)
+        const match = input.pageUrl.match(/([a-f0-9]{32})(?:[?#]|$)/i) ||
+                      input.pageUrl.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+        if (!match) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Could not extract a page ID from that Notion URL. Copy the URL directly from your browser.' });
+        }
+        const pageId = match[1].replace(/-/g, '');
+        // Fetch page blocks from Notion API
+        const blocksRes = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children?page_size=100`, {
+          headers: {
+            'Authorization': `Bearer ${keys.notionApiKey}`,
+            'Notion-Version': '2022-06-28',
+          },
+        });
+        if (!blocksRes.ok) {
+          const err = await blocksRes.json().catch(() => ({})) as { message?: string };
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Notion API error: ${err.message ?? blocksRes.statusText}` });
+        }
+        const blocksData = await blocksRes.json() as { results: Array<{ type: string; [key: string]: unknown }> };
+        // Convert blocks to plain text
+        const lines: string[] = [];
+        for (const block of blocksData.results) {
+          const richText = (block[block.type] as { rich_text?: Array<{ plain_text: string }> })?.rich_text ?? [];
+          const text = richText.map((t) => t.plain_text).join('');
+          if (text.trim()) lines.push(text);
+        }
+        if (lines.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'No readable text found in this Notion page.' });
+        }
+        return { text: lines.join('\n'), pageId };
+      }),
+  }),
+
+  // ─── Granola Import ───────────────────────────────────────────────────────────
+  granola: router({
+    /** List recent Granola meeting notes using the user's personal API key. */
+    listNotes: protectedProcedure.query(async ({ ctx }) => {
+      const keys = await getUserIntegrationKeys(ctx.user.id);
+      if (!keys.granolaApiKey) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Connect your Granola account in Settings → Integrations first.',
+        });
+      }
+      const res = await fetch('https://public-api.granola.ai/v1/notes?limit=20', {
+        headers: { 'Authorization': `Bearer ${keys.granolaApiKey}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string };
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Granola API error: ${err.message ?? res.statusText}` });
+      }
+      const data = await res.json() as { notes?: Array<{ id: string; title?: string; created_at?: string }> };
+      return (data.notes ?? []).map((n) => ({ id: n.id, title: n.title ?? 'Untitled Meeting', date: n.created_at ?? null }));
+    }),
+
+    /** Fetch the full transcript/notes for a specific Granola note. */
+    getNote: protectedProcedure
+      .input(z.object({ noteId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.granolaApiKey) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Connect your Granola account in Settings → Integrations first.' });
+        }
+        const res = await fetch(`https://public-api.granola.ai/v1/notes/${input.noteId}`, {
+          headers: { 'Authorization': `Bearer ${keys.granolaApiKey}` },
+        });
+        if (!res.ok) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Granola note not found.' });
+        }
+        const data = await res.json() as { id: string; title?: string; transcript?: string; summary?: string; created_at?: string };
+        return {
+          id: data.id,
+          title: data.title ?? 'Untitled Meeting',
+          transcript: data.transcript ?? '',
+          summary: data.summary ?? '',
+          date: data.created_at ?? null,
+        };
       }),
   }),
 
@@ -402,6 +498,109 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await setActionItemDueDate(input.id, ctx.user.id, input.dueDate);
         return { success: true };
+      }),
+  }),
+
+  // ─── Zoom & Teams Import ───────────────────────────────────────────────────
+  zoom: router({
+    /** List recent Zoom cloud recordings that have transcripts available. */
+    listRecordings: protectedProcedure
+      .query(async ({ ctx }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.zoomApiKey) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Connect your Zoom account in Settings → Integrations.' });
+        }
+        // Zoom Server-to-Server OAuth: list cloud recordings from the last 30 days
+        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const to = new Date().toISOString().split('T')[0];
+        const resp = await fetch(`https://api.zoom.us/v2/users/me/recordings?from=${from}&to=${to}&page_size=20`, {
+          headers: { Authorization: `Bearer ${keys.zoomApiKey}`, 'Content-Type': 'application/json' },
+        });
+        if (!resp.ok) {
+          const err = await resp.text();
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Zoom API error: ${err}` });
+        }
+        const data = await resp.json() as { meetings?: Array<{ uuid: string; topic: string; start_time: string; recording_files?: Array<{ file_type: string; download_url: string; id: string }> }> };
+        // Return only meetings that have a transcript file (VTT)
+        const meetings = (data.meetings ?? []).filter(m =>
+          m.recording_files?.some(f => f.file_type === 'TRANSCRIPT')
+        ).map(m => ({
+          id: m.uuid,
+          topic: m.topic,
+          startTime: m.start_time,
+          transcriptFileId: m.recording_files?.find(f => f.file_type === 'TRANSCRIPT')?.id ?? '',
+          downloadUrl: m.recording_files?.find(f => f.file_type === 'TRANSCRIPT')?.download_url ?? '',
+        }));
+        return { meetings };
+      }),
+
+    /** Fetch the VTT transcript text for a specific Zoom recording. */
+    getTranscript: protectedProcedure
+      .input(z.object({ downloadUrl: z.string().url(), topic: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.zoomApiKey) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Connect your Zoom account in Settings → Integrations.' });
+        }
+        const resp = await fetch(input.downloadUrl, {
+          headers: { Authorization: `Bearer ${keys.zoomApiKey}` },
+        });
+        if (!resp.ok) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to download Zoom transcript' });
+        const vtt = await resp.text();
+        // Strip VTT header/timestamps, extract plain text
+        const lines = vtt.split('\n');
+        const textLines = lines.filter(l => l.trim() && !l.startsWith('WEBVTT') && !l.match(/^\d+$/) && !l.match(/^\d{2}:\d{2}/));
+        const transcript = textLines.join(' ').replace(/\s+/g, ' ').trim();
+        return { transcript, title: input.topic };
+      }),
+  }),
+
+  teams: router({
+    /** List recent Teams meeting transcripts via Microsoft Graph API. */
+    listTranscripts: protectedProcedure
+      .query(async ({ ctx }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.teamsApiKey) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Connect your Microsoft Teams account in Settings → Integrations.' });
+        }
+        // Graph API: list online meetings with transcripts
+        const resp = await fetch('https://graph.microsoft.com/v1.0/me/onlineMeetings?$top=20&$select=id,subject,startDateTime', {
+          headers: { Authorization: `Bearer ${keys.teamsApiKey}`, 'Content-Type': 'application/json' },
+        });
+        if (!resp.ok) {
+          const err = await resp.text();
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Teams API error: ${err}` });
+        }
+        const data = await resp.json() as { value?: Array<{ id: string; subject: string; startDateTime: string }> };
+        return { meetings: (data.value ?? []).map(m => ({ id: m.id, subject: m.subject, startDateTime: m.startDateTime })) };
+      }),
+
+    /** Fetch transcript content for a specific Teams meeting. */
+    getTranscript: protectedProcedure
+      .input(z.object({ meetingId: z.string(), subject: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const keys = await getUserIntegrationKeys(ctx.user.id);
+        if (!keys.teamsApiKey) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Connect your Microsoft Teams account in Settings → Integrations.' });
+        }
+        // Get transcripts list for this meeting
+        const tResp = await fetch(`https://graph.microsoft.com/v1.0/me/onlineMeetings/${input.meetingId}/transcripts`, {
+          headers: { Authorization: `Bearer ${keys.teamsApiKey}` },
+        });
+        if (!tResp.ok) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to list Teams transcripts' });
+        const tData = await tResp.json() as { value?: Array<{ id: string }> };
+        const transcriptId = tData.value?.[0]?.id;
+        if (!transcriptId) throw new TRPCError({ code: 'NOT_FOUND', message: 'No transcript found for this Teams meeting' });
+        // Fetch the transcript content (plain text)
+        const cResp = await fetch(`https://graph.microsoft.com/v1.0/me/onlineMeetings/${input.meetingId}/transcripts/${transcriptId}/content?$format=text/vtt`, {
+          headers: { Authorization: `Bearer ${keys.teamsApiKey}` },
+        });
+        if (!cResp.ok) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to download Teams transcript' });
+        const vtt = await cResp.text();
+        const lines = vtt.split('\n');
+        const textLines = lines.filter(l => l.trim() && !l.startsWith('WEBVTT') && !l.match(/^\d+$/) && !l.match(/^\d{2}:\d{2}/));
+        const transcript = textLines.join(' ').replace(/\s+/g, ' ').trim();
+        return { transcript, title: input.subject };
       }),
   }),
 

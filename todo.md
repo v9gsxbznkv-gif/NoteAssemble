@@ -242,9 +242,33 @@
 - [ ] Otter.ai import: server procedure to list transcripts via Otter API, UI to select and import transcript text
 - [ ] Rev import: accept Rev transcript text or URL, parse/fetch content, populate session form with loading/error states
 - [ ] Vitest coverage for all three import procedures
+Note: These require user confirmation before building (Notion needs OAuth scope decision; Otter API is not publicly documented; Rev has no public API — may need scraping or manual paste flow). Deferred pending Chad's direction.
 
 ## Tests: Integration Procedures Coverage
 - [x] Add Vitest tests for integrations.getKeys, integrations.setKey, integrations.clearKey
 - [x] Add Vitest test: Fireflies.recent throws PRECONDITION_FAILED when user has no Fireflies key
 - [x] Add Vitest test: Fireflies.recent succeeds when user has a key set
 — 41 tests passing total
+
+## Feature: Notion, Otter.ai, and Granola Import Flows
+- [ ] Research Granola API availability
+- [ ] Add granolaApiKey column to users table, generate and apply migration
+- [ ] Add Notion import procedure: fetch page content by URL using user's Notion key
+- [ ] Add Otter.ai import procedure: list recent transcripts, fetch selected transcript text
+- [ ] Add Granola import procedure: fetch meeting notes using user's Granola key (or paste flow if no API)
+- [ ] Update Settings page: add Granola connection card
+- [ ] Add import buttons on NewSession page: Notion URL input, Otter picker, Granola picker
+- [ ] Remove misleading Rev API key field from Settings (replace with labeled paste button)
+- [ ] Write Vitest tests for all three import procedures
+
+## Feature: Rev, Zoom, Google Meet, Teams, Fyxer Integrations
+- [ ] Research Fyxer API capabilities and auth method
+- [ ] Add schema columns: zoomApiKey, teamsApiKey, fyxerApiKey (Rev/Meet use paste flow — no public API)
+- [ ] Generate and apply DB migration for new columns
+- [ ] Update getUserIntegrationKeys helper to include all new services
+- [ ] Add connection cards in Settings for Zoom, Teams, Fyxer (with API key input)
+- [ ] Add connection cards for Rev.com and Google Meet (labeled paste/upload flow — no API)
+- [ ] Add import procedures for Zoom (transcript list/fetch) and Teams (transcript fetch) where APIs exist
+- [ ] Add Fyxer import procedure if API supports transcript/note fetch
+- [ ] Remove "Coming soon" section from Settings — replace with real cards
+- [ ] Run tests and save checkpoint

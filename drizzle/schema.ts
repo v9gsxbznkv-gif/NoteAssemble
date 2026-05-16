@@ -13,6 +13,9 @@ export const users = mysqlTable("users", {
   firefliesApiKey: varchar("firefliesApiKey", { length: 255 }), // user's own Fireflies API key
   notionApiKey: varchar("notionApiKey", { length: 255 }), // user's Notion integration token
   otterApiKey: varchar("otterApiKey", { length: 255 }), // user's Otter.ai API key
+  granolaApiKey: varchar("granolaApiKey", { length: 255 }), // user's Granola personal API key
+  zoomApiKey: varchar("zoomApiKey", { length: 512 }), // user's Zoom Server-to-Server OAuth token or JWT
+  teamsApiKey: varchar("teamsApiKey", { length: 512 }), // user's Microsoft Teams (Graph API) access token
 });
 
 export type User = typeof users.$inferSelect;
