@@ -214,15 +214,15 @@
 - [x] Verify sign-in works end-to-end — 35 tests passing, 0 TypeScript errors
 
 ## Feature: Per-User Fireflies API Key
-- [ ] Add firefliesApiKey column (varchar 255, nullable) to users table in drizzle/schema.ts
-- [ ] Generate and apply DB migration for firefliesApiKey column
-- [ ] Add DB helpers: setUserFirefliesKey(userId, key), getUserFirefliesKey(userId), clearUserFirefliesKey(userId)
-- [ ] Add tRPC procedures: user.setFirefliesKey (protected), user.getFirefliesKey (protected, returns masked key), user.clearFirefliesKey (protected)
-- [ ] Update Fireflies import procedure to use ctx.user's firefliesApiKey instead of server env FIREFLIES_API_KEY
-- [ ] Show clear error if user has no Fireflies key set (prompt them to add it in Settings)
-- [ ] Build Settings page with Fireflies API key input (masked, show/hide toggle, save/clear buttons)
-- [ ] Add Settings link in BottomNav or AppShell header
-- [ ] Write vitest tests for new procedures
+- [x] Add firefliesApiKey column (varchar 255, nullable) to users table — done via migration 0006
+- [x] Generate and apply DB migration for firefliesApiKey column — migration 0006 applied
+- [x] Add DB helpers: setUserIntegrationKey, getUserIntegrationKeys, clearUserIntegrationKey (generic, covers all services)
+- [x] Add tRPC procedures: integrations.setKey, integrations.getKeys (masked), integrations.clearKey
+- [x] Update Fireflies import procedure to use ctx.user's firefliesApiKey (PRECONDITION_FAILED if not set)
+- [x] Show clear error if user has no Fireflies key set — PRECONDITION_FAILED with descriptive message
+- [x] Build Settings page with Fireflies API key input (masked, show/hide toggle, save/clear buttons)
+- [x] Add Settings link in BottomNav — 5th tab added
+- [x] Write vitest tests for new procedures — mocks added, 35 tests passing
 
 ## Feature: Per-User Integrations (Fireflies, Notion, Otter.ai, Rev)
 - [x] Add firefliesApiKey, notionApiKey, otterApiKey columns to users table
@@ -242,3 +242,9 @@
 - [ ] Otter.ai import: server procedure to list transcripts via Otter API, UI to select and import transcript text
 - [ ] Rev import: accept Rev transcript text or URL, parse/fetch content, populate session form with loading/error states
 - [ ] Vitest coverage for all three import procedures
+
+## Tests: Integration Procedures Coverage
+- [x] Add Vitest tests for integrations.getKeys, integrations.setKey, integrations.clearKey
+- [x] Add Vitest test: Fireflies.recent throws PRECONDITION_FAILED when user has no Fireflies key
+- [x] Add Vitest test: Fireflies.recent succeeds when user has a key set
+— 41 tests passing total

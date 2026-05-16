@@ -14,6 +14,9 @@ vi.mock("./db", () => ({
   toggleActionItem: vi.fn().mockResolvedValue(undefined),
   updateSession: vi.fn().mockResolvedValue(undefined),
   upsertActionItemsForSession: vi.fn().mockResolvedValue(undefined),
+  getUserIntegrationKeys: vi.fn().mockResolvedValue({ firefliesApiKey: 'test-key', notionApiKey: null, otterApiKey: null }),
+  setUserIntegrationKey: vi.fn().mockResolvedValue(undefined),
+  clearUserIntegrationKey: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("./fireflies", () => ({
@@ -142,9 +145,92 @@ describe("sessions.getShared", () => {
     const caller = appRouter.createCaller(ctx);
     await expect(caller.sessions.getShared({ token: "badtoken" })).rejects.toThrow("Shared session not found");
   });
+});// ─── Integrations procedures ─────────────────────────────────────────────────
+describe("integrations.getKeys", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns masked keys for connected services", async () => {
+    const ctx = makeCtx();
+    vi.mocked(db.getUserIntegrationKeys).mockResolvedValueOnce({
+      firefliesApiKey: "ff-abc123xyz",
+      notionApiKey: null,
+      otterApiKey: null,
+    });
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.integrations.getKeys();
+    expect(result.fireflies.connected).toBe(true);
+    expect(result.fireflies.masked).toContain("3xyz"); // masked shows last 4 chars
+    expect(result.notion.connected).toBe(false);
+    expect(result.otter.connected).toBe(false);
+  });
+
+  it("returns all disconnected when no keys set", async () => {
+    const ctx = makeCtx();
+    vi.mocked(db.getUserIntegrationKeys).mockResolvedValueOnce({
+      firefliesApiKey: null,
+      notionApiKey: null,
+      otterApiKey: null,
+    });
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.integrations.getKeys();
+    expect(result.fireflies.connected).toBe(false);
+    expect(result.notion.connected).toBe(false);
+    expect(result.otter.connected).toBe(false);
+  });
 });
 
-// ─── Feature 4: OCR Extract ───────────────────────────────────────────────────
+describe("integrations.setKey", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("saves a Fireflies key for the current user", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.integrations.setKey({ service: "fireflies", apiKey: "ff-newkey" });
+    expect(result).toEqual({ success: true });
+    expect(db.setUserIntegrationKey).toHaveBeenCalledWith(42, "firefliesApiKey", "ff-newkey");
+  });
+});
+
+describe("integrations.clearKey", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("clears a Notion key for the current user", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.integrations.clearKey({ service: "notion" });
+    expect(result).toEqual({ success: true });
+    expect(db.clearUserIntegrationKey).toHaveBeenCalledWith(42, "notionApiKey");
+  });
+});
+
+describe("fireflies.recent — per-user key", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("throws PRECONDITION_FAILED when user has no Fireflies key", async () => {
+    const ctx = makeCtx();
+    vi.mocked(db.getUserIntegrationKeys).mockResolvedValueOnce({
+      firefliesApiKey: null,
+      notionApiKey: null,
+      otterApiKey: null,
+    });
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.fireflies.recent()).rejects.toThrow();
+  });
+
+  it("succeeds when user has a Fireflies key", async () => {
+    const ctx = makeCtx();
+    vi.mocked(db.getUserIntegrationKeys).mockResolvedValueOnce({
+      firefliesApiKey: "ff-userkey",
+      notionApiKey: null,
+      otterApiKey: null,
+    });
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.fireflies.recent();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+// ─── Feature 4: OCR Extract ─────────────────────────────────────────────────────
 describe("notes.extractFromImage", () => {
   beforeEach(() => vi.clearAllMocks());
 
