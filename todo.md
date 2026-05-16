@@ -272,3 +272,18 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [ ] Add Fyxer import procedure if API supports transcript/note fetch
 - [ ] Remove "Coming soon" section from Settings — replace with real cards
 - [ ] Run tests and save checkpoint
+
+## Bug Fix: Fireflies "Get API Key" Link Points to Granola
+- [x] Fireflies card docsUrl was already correct (https://app.fireflies.ai/integrations/custom/fireflies)
+- [x] Root cause: Granola card docsUrl was pointing to generic granola.ai homepage — fixed to app.granola.ai/settings/api
+- [x] Audited all 6 integration card URLs — all correct (checkpoint 1f7fa311)
+
+## Feature: File Upload Import (PDF, DOCX, TXT, MD)
+- [x] Install pdf-parse and mammoth npm packages for server-side text extraction
+- [x] Add Express multipart file upload endpoint: POST /api/extract-file (accepts PDF, DOCX, TXT, MD up to 10MB)
+- [x] Extract text from PDF using pdf-parse (PDFParse class API), DOCX using mammoth, TXT/MD as plain text
+- [x] Add "Upload File" button on New Session page (paperclip icon) — opens file picker for .pdf, .txt, .md, .docx
+- [x] Show progress/loading state while file is uploading and extracting (Loader2 spinner, disabled state)
+- [x] Append extracted text to personalNotes field (with file name as header)
+- [x] Handle errors: unsupported format, file too large, extraction failure (toast messages)
+- [x] Write vitest tests for file extraction endpoint (4 tests: no file, TXT, MD, short text 422)

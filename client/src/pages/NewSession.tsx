@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Sparkles, FileText, Lock, Flame, Search, X, Tag, ChevronDown, Camera, ClipboardPaste, Loader2 } from "lucide-react";
+import { ArrowLeft, Sparkles, FileText, Lock, Flame, Search, X, Tag, ChevronDown, Camera, ClipboardPaste, Loader2, Paperclip } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
@@ -322,6 +322,34 @@ export default function NewSession() {
   const [tags, setTags] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showPasteModal, setShowPasteModal] = useState(false);
+  const [isExtractingFile, setIsExtractingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!fileInputRef.current) return;
+    fileInputRef.current.value = "";
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 10MB.");
+      return;
+    }
+    setIsExtractingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/extract-file", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Extraction failed");
+      const header = `--- Imported from ${file.name} ---\n`;
+      setPersonalNotes((prev) => prev ? prev + "\n\n" + header + data.text : header + data.text);
+      toast.success(`Extracted ${data.chars.toLocaleString()} characters from ${file.name}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to extract file");
+    } finally {
+      setIsExtractingFile(false);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate("/login");
@@ -447,6 +475,23 @@ export default function NewSession() {
             {/* Import buttons */}
             <div style={{ display: "flex", gap: "6px" }}>
               <PhotoImportButton onExtracted={(text) => setPersonalNotes((prev) => prev ? prev + "\n\n" + text : text)} />
+              {/* File upload button */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt,.md,.docx"
+                style={{ display: "none" }}
+                onChange={handleFileUpload}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isExtractingFile}
+                style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", borderRadius: "8px", background: "var(--secondary)", border: "1px solid var(--border)", color: "var(--muted-foreground)", fontSize: "12px", fontWeight: 500, fontFamily: "var(--font-sans)", cursor: isExtractingFile ? "not-allowed" : "pointer", whiteSpace: "nowrap", opacity: isExtractingFile ? 0.6 : 1 }}
+              >
+                {isExtractingFile ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> : <Paperclip size={13} />}
+                {isExtractingFile ? "Extracting…" : "Upload File"}
+              </button>
               <button
                 type="button"
                 onClick={() => setShowPasteModal(true)}

@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { weeklyDigestHandler } from "../weeklyDigest";
+import { extractFileMiddleware, extractFileHandler } from "../fileExtract";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -45,6 +46,8 @@ async function startServer() {
       createContext,
     })
   );
+  // File extraction endpoint — must be before Vite/static fallthrough
+  app.post("/api/extract-file", extractFileMiddleware, extractFileHandler);
   // Scheduled handlers — must be before Vite/static fallthrough
   app.post("/api/scheduled/weekly-digest", weeklyDigestHandler);
 
