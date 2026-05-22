@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import AppShell from "@/components/AppShell";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -429,6 +430,7 @@ export default function Settings() {
   const API_SERVICES: ApiService[] = ["fireflies", "granola", "zoom", "teams", "notion", "otter"];
 
   return (
+    <AppShell>
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
@@ -499,5 +501,6 @@ export default function Settings() {
         </section>
       </div>
     </div>
+    </AppShell>
   );
 }
