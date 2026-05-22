@@ -365,3 +365,12 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Update Login.tsx logo: same <picture> pattern for nav bar logo
 - [x] Auto-switches with no JS — pure CSS media query, works on first paint before hydration
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Share & Referral (Settings Page)
+- [x] Create SHARE1MO Stripe coupon (100% off first month of Pro, up to 10,000 redemptions)
+- [x] Add ShareSection component to Settings page with coupon code callout (SHARE1MO)
+- [x] "Share with a Friend" button triggers native Web Share API on mobile (iOS/Android share sheet)
+- [x] "Copy Message" button copies pre-written referral message with code + URL to clipboard
+- [x] Copy icon toggles to checkmark on success with toast confirmation
+- [x] Pre-written share message: "I've been using NoteAssemble... Use code SHARE1MO at checkout for a free month of Pro: https://noteassemble.com"
+- [x] 50 tests passing, 0 TypeScript errors

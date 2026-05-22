@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Eye, EyeOff, ExternalLink, ClipboardPaste, Upload, Crown, Smartphone, Download } from "lucide-react";
+import { CheckCircle2, XCircle, Eye, EyeOff, ExternalLink, ClipboardPaste, Upload, Crown, Smartphone, Download, Share2, Copy, Check } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useRef } from "react";
 
@@ -422,6 +422,116 @@ function InstallAppSection() {
   );
 }
 
+// ─── Share & Refer Section ──────────────────────────────────────────────────────────────
+
+const REFERRAL_CODE = "SHARE1MO";
+const REFERRAL_URL = "https://noteassemble.com";
+const SHARE_MESSAGE = `I've been using NoteAssemble to capture and analyze my meetings with AI — it's a game changer. Use code ${REFERRAL_CODE} at checkout for a free month of Pro: ${REFERRAL_URL}`;
+
+function ShareSection() {
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "NoteAssemble — AI Meeting Notes",
+          text: SHARE_MESSAGE,
+          url: REFERRAL_URL,
+        });
+      } catch {
+        // User cancelled — no-op
+      }
+    } else {
+      handleCopy();
+    }
+  }
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(SHARE_MESSAGE);
+    setCopied(true);
+    toast.success("Referral message copied!");
+    setTimeout(() => setCopied(false), 2500);
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Share2 className="w-4 h-4 text-amber-500" />
+          <CardTitle className="text-base">Share NoteAssemble</CardTitle>
+        </div>
+        <CardDescription>
+          Share with a friend and they get their <strong>first month of Pro free</strong> — no credit card required upfront.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Coupon callout */}
+        <div
+          style={{
+            background: "color-mix(in oklch, var(--primary) 10%, transparent)",
+            border: "1px solid color-mix(in oklch, var(--primary) 30%, transparent)",
+            borderRadius: "8px",
+            padding: "12px 14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}
+        >
+          <div>
+            <p className="text-xs text-muted-foreground mb-0.5">Referral coupon code</p>
+            <p className="text-lg font-bold tracking-widest" style={{ color: "var(--primary)", fontFamily: "var(--font-mono, monospace)" }}>
+              {REFERRAL_CODE}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">100% off first month of Pro</p>
+          </div>
+          <button
+            onClick={handleCopy}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: copied ? "oklch(60% 0.15 145)" : "var(--muted-foreground)",
+              padding: "6px",
+              borderRadius: "6px",
+              transition: "color 0.2s",
+            }}
+            title="Copy code"
+          >
+            {copied ? <Check size={18} /> : <Copy size={18} />}
+          </button>
+        </div>
+
+        {/* Share buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={handleShare}
+            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            size="sm"
+          >
+            <Share2 className="w-4 h-4" />
+            Share with a Friend
+          </Button>
+          <Button
+            onClick={handleCopy}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? "Copied!" : "Copy Message"}
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          They enter code <strong>{REFERRAL_CODE}</strong> at checkout on the <a href="/pricing" className="underline">pricing page</a>. First month is completely free.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main Settings Page ──────────────────────────────────────────────────────────────
 
 export default function Settings() {
@@ -490,6 +600,14 @@ export default function Settings() {
             Plan &amp; Billing
           </h2>
           <BillingSection />
+        </section>
+
+        {/* Share & Refer */}
+        <section className="mt-10">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Share &amp; Refer
+          </h2>
+          <ShareSection />
         </section>
 
         {/* Install App */}
