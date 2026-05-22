@@ -56,9 +56,11 @@ export default function Login() {
       {/* Nav */}
       <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1px solid var(--border)", maxWidth: "900px", margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "var(--font-serif)", fontSize: "16px", fontWeight: 700, color: "var(--primary-foreground)", lineHeight: 1 }}>N</span>
-          </div>
+          <img
+            src="/manus-storage/noteassemble_icon_amber_00aa8c0f.svg"
+            alt="NoteAssemble"
+            style={{ width: "36px", height: "36px", flexShrink: 0 }}
+          />
           <span style={{ fontFamily: "var(--font-serif)", fontSize: "17px", fontWeight: 600, color: "var(--foreground)" }}>NoteAssemble</span>
         </div>
         <button

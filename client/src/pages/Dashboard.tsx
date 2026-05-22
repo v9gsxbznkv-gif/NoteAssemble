@@ -208,16 +208,24 @@ export default function Dashboard() {
     <AppShell>
       <div className="container py-6">
         {/* Header */}
-        <div className="mb-6">
-          <p style={{ fontSize: "12px", color: "var(--muted-foreground)", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "var(--font-sans)", marginBottom: "4px" }}>
-            {greeting}
-          </p>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "26px", fontWeight: 600, color: "var(--foreground)", margin: 0, lineHeight: 1.2 }}>
-            {firstName}
-          </h1>
-          <p style={{ fontSize: "13px", color: "var(--muted-foreground)", marginTop: "4px", fontFamily: "var(--font-sans)" }}>
-            {filteredSessions?.length ?? 0} session{filteredSessions?.length !== 1 ? "s" : ""}{activeTag ? ` · ${activeTag}` : " captured"}
-          </p>
+        <div className="mb-6" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ fontSize: "12px", color: "var(--muted-foreground)", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "var(--font-sans)", marginBottom: "4px" }}>
+              {greeting}
+            </p>
+            <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "26px", fontWeight: 600, color: "var(--foreground)", margin: 0, lineHeight: 1.2 }}>
+              {firstName}
+            </h1>
+            <p style={{ fontSize: "13px", color: "var(--muted-foreground)", marginTop: "4px", fontFamily: "var(--font-sans)" }}>
+              {filteredSessions?.length ?? 0} session{filteredSessions?.length !== 1 ? "s" : ""}{activeTag ? ` · ${activeTag}` : " captured"}
+            </p>
+          </div>
+          {/* NoteAssemble logo icon */}
+          <img
+            src="/manus-storage/noteassemble_icon_amber_00aa8c0f.svg"
+            alt="NoteAssemble"
+            style={{ width: "48px", height: "48px", flexShrink: 0, marginTop: "2px" }}
+          />
         </div>
 
         {/* Free plan usage bar */}
