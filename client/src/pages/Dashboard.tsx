@@ -221,7 +221,7 @@ export default function Dashboard() {
             </p>
           </div>
           {/* NoteAssemble logo icon — taps always go home; auto-switches for dark/light mode */}
-          <Link href="/" style={{ display: "flex", flexShrink: 0, marginTop: "2px" }}>
+          <Link href="/dashboard" style={{ display: "flex", flexShrink: 0, marginTop: "2px" }}>
             <picture>
               <source
                 srcSet="/manus-storage/noteassemble_n_pen_dark_v3_66c1b3e6.png"

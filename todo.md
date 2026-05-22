@@ -383,3 +383,12 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] "Clear filters" resets active tag back to All
 - [x] Tabs only appear when at least one session has tags (no empty strip for new users)
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Public Landing Page
+- [x] Landing page at / with hero, features grid, how-it-works, testimonials, pricing teaser, footer
+- [x] Sticky nav with logo, Pricing link, Get Started CTA
+- [x] Logged-out visitors see landing page; logged-in users auto-redirect to /dashboard
+- [x] Dashboard moved to /dashboard route; BottomNav Home tab updated to /dashboard
+- [x] Dashboard logo link updated to /dashboard
+- [x] Dark/light mode logo in landing nav and footer
+- [x] 50 tests passing, 0 TypeScript errors

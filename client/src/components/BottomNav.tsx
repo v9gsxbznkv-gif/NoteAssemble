@@ -2,7 +2,7 @@ import { Home, PlusCircle, Clock, CheckSquare, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 const tabs = [
-  { path: "/", label: "Home", icon: Home },
+  { path: "/dashboard", label: "Home", icon: Home },
   { path: "/new", label: "New", icon: PlusCircle },
   { path: "/actions", label: "Actions", icon: CheckSquare },
   { path: "/history", label: "History", icon: Clock },
@@ -25,7 +25,7 @@ export default function BottomNav() {
     >
       <div className="flex items-stretch max-w-lg mx-auto">
         {tabs.map(({ path, label, icon: Icon }) => {
-          const isActive = path === "/" ? location === "/" : location.startsWith(path);
+          const isActive = path === "/dashboard" ? location === "/dashboard" || location === "/" : location.startsWith(path);
           return (
             <Link
               key={path}
