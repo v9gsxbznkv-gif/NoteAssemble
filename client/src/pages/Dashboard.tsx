@@ -224,7 +224,7 @@ export default function Dashboard() {
           <Link href="/" style={{ display: "flex", flexShrink: 0, marginTop: "2px" }}>
             <picture>
               <source
-                srcSet="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_dark-5mH5EJtFkLL8A7HTeeWQm6.webp"
+                srcSet="/manus-storage/noteassemble_n_pen_dark_v3_66c1b3e6.png"
                 media="(prefers-color-scheme: dark)"
               />
               <img
