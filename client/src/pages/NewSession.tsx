@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Sparkles, FileText, Lock, Flame, Search, X, Tag, ChevronDown, Camera, ClipboardPaste, Loader2, Paperclip, Zap } from "lucide-react";
+import { ArrowLeft, Sparkles, FileText, Lock, Flame, Search, X, Tag, ChevronDown, Camera, ClipboardPaste, Loader2, Paperclip, Zap, Mic, MicOff, Square } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
@@ -326,6 +326,71 @@ export default function NewSession() {
   const [isExtractingFile, setIsExtractingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ─── Audio recording state ─────────────────────────────────────────────────
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : "";
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.start(250);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    } catch {
+      toast.error("Microphone access denied. Please allow microphone access in your browser settings.");
+    }
+  };
+
+  const stopRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    recorder.onstop = async () => {
+      // Stop all tracks to release mic
+      recorder.stream.getTracks().forEach((t) => t.stop());
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      setIsRecording(false);
+      const mimeType = recorder.mimeType || "audio/webm";
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      if (blob.size > 16 * 1024 * 1024) {
+        toast.error("Recording too large (max 16 MB). Please record shorter segments.");
+        return;
+      }
+      setIsTranscribing(true);
+      try {
+        const formData = new FormData();
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        formData.append("audio", blob, `recording.${ext}`);
+        const res = await fetch("/api/transcribe-audio", { method: "POST", body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Transcription failed");
+        setTranscript((prev) => prev ? prev + "\n\n" + data.transcript : data.transcript);
+        const dur = data.duration ? ` (${Math.round(data.duration)}s)` : "";
+        toast.success(`Recording transcribed${dur}`);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Failed to transcribe recording");
+      } finally {
+        setIsTranscribing(false);
+      }
+    };
+    recorder.stop();
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!fileInputRef.current) return;
@@ -500,10 +565,26 @@ export default function NewSession() {
               <FileText size={12} />
               Meeting Transcript
             </label>
-            <FirefliesPicker onSelect={handleFirefliesSelect} />
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isTranscribing}
+                style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", borderRadius: "8px", background: isRecording ? "color-mix(in oklch, #ef4444 15%, var(--secondary))" : "var(--secondary)", border: `1px solid ${isRecording ? "color-mix(in oklch, #ef4444 50%, transparent)" : "var(--border)"}`, color: isRecording ? "#ef4444" : "var(--muted-foreground)", fontSize: "12px", fontWeight: 500, fontFamily: "var(--font-sans)", cursor: isTranscribing ? "not-allowed" : "pointer", whiteSpace: "nowrap", opacity: isTranscribing ? 0.5 : 1, transition: "all 0.2s" }}
+              >
+                {isTranscribing ? (
+                  <><Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />Transcribing…</>
+                ) : isRecording ? (
+                  <><Square size={11} fill="#ef4444" style={{ flexShrink: 0 }} /><span style={{ animation: "pulse 1s ease-in-out infinite" }}>{formatTime(recordingSeconds)}</span> Stop</>
+                ) : (
+                  <><Mic size={13} />Record</>  
+                )}
+              </button>
+              <FirefliesPicker onSelect={handleFirefliesSelect} />
+            </div>
           </div>
           <textarea
-            placeholder="Paste your Fireflies, Otter, or other transcript here — or use the Pull from Fireflies button above..."
+            placeholder="Paste your Fireflies, Otter, or other transcript here — or tap Record to capture audio directly..."
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             rows={7}
@@ -517,6 +598,27 @@ export default function NewSession() {
             </p>
           )}
         </div>
+
+        {/* Record button — above transcript */}
+        {(isRecording || isTranscribing) && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: isRecording ? "color-mix(in oklch, #ef4444 12%, var(--card))" : "color-mix(in oklch, var(--primary) 10%, var(--card))", border: `1px solid ${isRecording ? "color-mix(in oklch, #ef4444 40%, transparent)" : "color-mix(in oklch, var(--primary) 30%, transparent)"}`, marginBottom: "12px" }}>
+            {isRecording ? (
+              <>
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: "#ef4444", letterSpacing: "0.05em" }}>{formatTime(recordingSeconds)}</span>
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "var(--muted-foreground)", flex: 1 }}>Recording… tap Stop when done</span>
+                <button type="button" onClick={stopRecording} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "7px", background: "#ef4444", border: "none", color: "#fff", fontSize: "12px", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer" }}>
+                  <Square size={11} fill="#fff" />Stop
+                </button>
+              </>
+            ) : (
+              <>
+                <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite", color: "var(--primary)", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", color: "var(--muted-foreground)" }}>Transcribing recording…</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Private Notes — with Photo OCR + Paste import */}
         <div className="mb-6">
@@ -591,7 +693,7 @@ export default function NewSession() {
           </button>
         </div>
 
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
       </div>
 
       {/* Paste from App modal */}

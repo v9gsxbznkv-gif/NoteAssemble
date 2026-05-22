@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import { weeklyDigestHandler } from "../weeklyDigest";
 import { extractFileMiddleware, extractFileHandler } from "../fileExtract";
 import { stripeWebhookHandler } from "../stripeWebhook";
+import { audioUploadMiddleware, audioTranscribeHandler } from "../audioTranscribe";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -51,6 +52,8 @@ async function startServer() {
   );
   // File extraction endpoint — must be before Vite/static fallthrough
   app.post("/api/extract-file", extractFileMiddleware, extractFileHandler);
+  // Audio transcription endpoint — accepts multipart audio, returns transcript
+  app.post("/api/transcribe-audio", audioUploadMiddleware, audioTranscribeHandler);
   // Scheduled handlers — must be before Vite/static fallthrough
   app.post("/api/scheduled/weekly-digest", weeklyDigestHandler);
 

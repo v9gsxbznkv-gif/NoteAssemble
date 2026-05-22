@@ -324,3 +324,12 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Show upgrade modal on New Session page when free user hits the limit (dialog with Upgrade to Pro CTA)
 - [x] Allow promo code entry on Stripe checkout (allow_promotion_codes: true)
 - [x] Fix sessions.test.ts db mock to include getUserBilling + countSessionsThisMonth (50 tests passing)
+
+## Feature: In-App Audio Recording
+- [x] Add POST /api/transcribe-audio Express endpoint — accepts multipart audio file (webm/mp4 up to 16MB), uploads to S3, calls Whisper via voiceTranscription helper, returns { transcript, language, duration }
+- [x] Add Record button on New Session page (Mic icon) — tap to start MediaRecorder, tap again to stop
+- [x] Show live recording timer (00:00 format) and animated red pulse indicator while recording
+- [x] On stop: upload audio blob to /api/transcribe-audio, show "Transcribing…" spinner in button
+- [x] On success: append Whisper transcript to transcript field, show toast with duration
+- [x] Handle errors: mic permission denied, file too large, transcription failure (toast messages)
+- [x] 50 tests passing, 0 TypeScript errors
