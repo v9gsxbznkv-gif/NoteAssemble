@@ -57,7 +57,7 @@ export default function Login() {
       <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1px solid var(--border)", maxWidth: "900px", margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <img
-            src="/manus-storage/noteassemble_icon_amber_00aa8c0f.svg"
+            src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
             alt="NoteAssemble"
             style={{ width: "36px", height: "36px", flexShrink: 0 }}
           />

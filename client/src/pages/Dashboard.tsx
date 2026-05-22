@@ -222,7 +222,7 @@ export default function Dashboard() {
           </div>
           {/* NoteAssemble logo icon */}
           <img
-            src="/manus-storage/noteassemble_icon_amber_00aa8c0f.svg"
+            src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
             alt="NoteAssemble"
             style={{ width: "48px", height: "48px", flexShrink: 0, marginTop: "2px" }}
           />
