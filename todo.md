@@ -357,3 +357,11 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Waveform re-attaches when user returns to /new (canvas draws from live analyser)
 - [x] Tapping the floating bar navigates back to /new
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Dark Mode Logo Auto-Switch
+- [x] Generate dark mode N-pen logo (white/cream on transparent background) via AI image generation
+- [x] Upload dark logo to CDN (CloudFront): noteassemble_n_pen_dark-5mH5EJtFkLL8A7HTeeWQm6.webp
+- [x] Update Dashboard.tsx logo: replace <img> with <picture> element — <source media="(prefers-color-scheme: dark)"> serves dark logo, <img> fallback serves amber/gold logo
+- [x] Update Login.tsx logo: same <picture> pattern for nav bar logo
+- [x] Auto-switches with no JS — pure CSS media query, works on first paint before hydration
+- [x] 50 tests passing, 0 TypeScript errors

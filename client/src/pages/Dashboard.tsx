@@ -220,13 +220,19 @@ export default function Dashboard() {
               {filteredSessions?.length ?? 0} session{filteredSessions?.length !== 1 ? "s" : ""}{activeTag ? ` · ${activeTag}` : " captured"}
             </p>
           </div>
-          {/* NoteAssemble logo icon — taps always go home */}
+          {/* NoteAssemble logo icon — taps always go home; auto-switches for dark/light mode */}
           <Link href="/" style={{ display: "flex", flexShrink: 0, marginTop: "2px" }}>
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
-              alt="NoteAssemble — go to dashboard"
-              style={{ width: "48px", height: "48px", cursor: "pointer" }}
-            />
+            <picture>
+              <source
+                srcSet="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_dark-5mH5EJtFkLL8A7HTeeWQm6.webp"
+                media="(prefers-color-scheme: dark)"
+              />
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
+                alt="NoteAssemble — go to dashboard"
+                style={{ width: "48px", height: "48px", cursor: "pointer" }}
+              />
+            </picture>
           </Link>
         </div>
 

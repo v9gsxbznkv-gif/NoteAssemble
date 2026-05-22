@@ -56,11 +56,17 @@ export default function Login() {
       {/* Nav */}
       <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1px solid var(--border)", maxWidth: "900px", margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <img
-            src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
-            alt="NoteAssemble"
-            style={{ width: "36px", height: "36px", flexShrink: 0 }}
-          />
+          <picture>
+              <source
+                srcSet="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_dark-5mH5EJtFkLL8A7HTeeWQm6.webp"
+                media="(prefers-color-scheme: dark)"
+              />
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
+                alt="NoteAssemble"
+                style={{ width: "36px", height: "36px", flexShrink: 0 }}
+              />
+            </picture>
           <span style={{ fontFamily: "var(--font-serif)", fontSize: "17px", fontWeight: 600, color: "var(--foreground)" }}>NoteAssemble</span>
         </div>
         <button
