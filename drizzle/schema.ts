@@ -61,3 +61,32 @@ export const actionItems = mysqlTable("actionItems", {
 
 export type ActionItem = typeof actionItems.$inferSelect;
 export type InsertActionItem = typeof actionItems.$inferInsert;
+
+// Todo categories — user-defined buckets like Church, Real Estate, Personal
+export const todoCategories = mysqlTable("todoCategories", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TodoCategory = typeof todoCategories.$inferSelect;
+export type InsertTodoCategory = typeof todoCategories.$inferInsert;
+
+// Todos table — standalone personal to-do items grouped by category
+export const todos = mysqlTable("todos", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  categoryId: int("categoryId").notNull(), // FK to todoCategories.id
+  text: text("text").notNull(),
+  completed: boolean("completed").default(false).notNull(),
+  priority: mysqlEnum("priority", ["high", "medium", "low"]).default("medium").notNull(),
+  dueDate: bigint("dueDate", { mode: "number" }), // nullable UTC ms timestamp
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Todo = typeof todos.$inferSelect;
+export type InsertTodo = typeof todos.$inferInsert;

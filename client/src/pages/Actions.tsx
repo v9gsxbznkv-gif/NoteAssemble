@@ -58,6 +58,7 @@ export default function Actions() {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sessionFilter, setSessionFilter] = useState<string>("all");
+  const [activeTag, setActiveTag] = useState<string>("all"); // "all" or a tag name
   const [editingDueDateId, setEditingDueDateId] = useState<number | null>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,6 +105,14 @@ export default function Actions() {
     return names.sort();
   }, [items]);
 
+  // Collect all unique tags across all items
+  const allTags = useMemo(() => {
+    if (!items) return [];
+    const tagSet = new Set<string>();
+    items.forEach((i) => i.parsedTags.forEach((t) => tagSet.add(t)));
+    return Array.from(tagSet).sort();
+  }, [items]);
+
   const hasActiveFilters = searchQuery.trim() !== "" || sessionFilter !== "all" || priorityFilter !== "all" || filterMode !== "open";
 
   const filtered = useMemo(() => {
@@ -116,16 +125,18 @@ export default function Actions() {
         item.completed;
       const priorityMatch = priorityFilter === "all" || item.priority === priorityFilter;
       const sessionMatch = sessionFilter === "all" || item.sessionName === sessionFilter;
+      const tagMatch = activeTag === "all" || item.parsedTags.includes(activeTag);
       const searchMatch = !q || item.task.toLowerCase().includes(q) || (item.owner ?? "").toLowerCase().includes(q) || item.sessionName.toLowerCase().includes(q) || (item.context ?? "").toLowerCase().includes(q);
-      return modeMatch && priorityMatch && sessionMatch && searchMatch;
+      return modeMatch && priorityMatch && sessionMatch && tagMatch && searchMatch;
     });
-  }, [items, filterMode, priorityFilter, searchQuery, sessionFilter]);
+  }, [items, filterMode, priorityFilter, searchQuery, sessionFilter, activeTag]);
 
   const clearAllFilters = () => {
     setSearchQuery("");
     setSessionFilter("all");
     setPriorityFilter("all");
     setFilterMode("open");
+    setActiveTag("all");
   };
 
   const openCount = items?.filter((i) => !i.completed).length ?? 0;
@@ -176,9 +187,56 @@ export default function Actions() {
               </span>
             )}
           </div>
-          <p style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-sans)", fontSize: "13px", margin: "0 0 20px" }}>
+          <p style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-sans)", fontSize: "13px", margin: "0 0 14px" }}>
             Action items extracted from all your sessions.
           </p>
+
+          {/* Tag tabs — only show when there are tags */}
+          {allTags.length > 0 && (
+            <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px", marginBottom: "14px", scrollbarWidth: "none" }}>
+              {(["all", ...allTags] as string[]).map((tag) => {
+                const isActive = activeTag === tag;
+                const count = tag === "all"
+                  ? (items?.filter((i) => !i.completed).length ?? 0)
+                  : (items?.filter((i) => !i.completed && i.parsedTags.includes(tag)).length ?? 0);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTag(tag)}
+                    style={{
+                      flexShrink: 0,
+                      padding: "6px 14px",
+                      borderRadius: "20px",
+                      background: isActive ? "var(--primary)" : "var(--secondary)",
+                      border: `1px solid ${isActive ? "var(--primary)" : "var(--border)"}`,
+                      color: isActive ? "var(--primary-foreground)" : "var(--muted-foreground)",
+                      fontSize: "13px",
+                      fontWeight: isActive ? 700 : 400,
+                      fontFamily: "var(--font-sans)",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      transition: "background 0.15s, color 0.15s, border-color 0.15s",
+                    }}
+                  >
+                    {tag === "all" ? "All" : tag}
+                    {count > 0 && (
+                      <span style={{
+                        marginLeft: "6px",
+                        background: isActive ? "rgba(255,255,255,0.25)" : "color-mix(in oklch, var(--primary) 15%, transparent)",
+                        color: isActive ? "var(--primary-foreground)" : "var(--primary)",
+                        borderRadius: "10px",
+                        padding: "1px 6px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                      }}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Search bar */}
           <div style={{ position: "relative", marginBottom: "10px" }}>

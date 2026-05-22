@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `todoCategories` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`name` varchar(100) NOT NULL,\n\t`sortOrder` int NOT NULL DEFAULT 0,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `todoCategories_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `todos` ADD `categoryId` int NOT NULL DEFAULT 0;\nALTER TABLE `todos` ADD `sortOrder` int DEFAULT 0 NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 389WXeUiqLtF2L4.99e8f69fe3e9 --database VAGE5Jp3b45KbifC3JSBbp --execute CREATE TABLE `todoCategories` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`name` varchar(100) NOT NULL,\n\t`sortOrder` int NOT NULL DEFAULT 0,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `todoCategories_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `todos` ADD `categoryId` int NOT NULL DEFAULT 0;\nALTER TABLE `todos` ADD `sortOrder` int DEFAULT 0 NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 655
+}

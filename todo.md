@@ -374,3 +374,12 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Copy icon toggles to checkmark on success with toast confirmation
 - [x] Pre-written share message: "I've been using NoteAssemble... Use code SHARE1MO at checkout for a free month of Pro: https://noteassemble.com"
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Tag Tabs on Actions Page
+- [x] Collect all unique session tags across user's action items (Church, Real Estate, Personal, etc.)
+- [x] Render horizontal scrollable tab strip: All + one pill per tag, with open item count badge
+- [x] Active tab filters action items to only those from sessions tagged with that category
+- [x] Tag filter composes with existing Open/Done/Priority/Session/Search filters
+- [x] "Clear filters" resets active tag back to All
+- [x] Tabs only appear when at least one session has tags (no empty strip for new users)
+- [x] 50 tests passing, 0 TypeScript errors
