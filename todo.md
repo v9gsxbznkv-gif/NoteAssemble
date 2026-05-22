@@ -340,3 +340,10 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Add "Upload Audio" button — file picker for .mp3, .m4a, .wav, .webm, .ogg up to 16MB — transcribes via /api/transcribe-audio
 - [x] Shared transcribeBlob() helper used by both live recording and file upload
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Real-Time Audio Waveform Visualizer
+- [x] Add AudioContext + AnalyserNode to capture frequency data from mic stream
+- [x] Render animated 48-bar waveform in a canvas element during recording (pure Web Audio API + requestAnimationFrame)
+- [x] Waveform pauses to amber flat line on Pause, restarts on Resume, clears on Stop
+- [x] No external libraries — pure Web Audio API + requestAnimationFrame
+- [x] 50 tests passing, 0 TypeScript errors

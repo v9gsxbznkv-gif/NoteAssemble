@@ -335,6 +335,72 @@ export default function NewSession() {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+
+  // ─── Waveform draw loop ────────────────────────────────────────────────────
+  const drawWaveform = (paused: boolean) => {
+    const canvas = canvasRef.current;
+    const analyser = analyserRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const W = canvas.width;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    if (!analyser || paused) {
+      // Draw flat dim line when paused
+      ctx.strokeStyle = paused ? "rgba(245,158,11,0.35)" : "rgba(239,68,68,0.2)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, H / 2);
+      ctx.lineTo(W, H / 2);
+      ctx.stroke();
+      return;
+    }
+    const bufLen = analyser.frequencyBinCount;
+    const dataArr = new Uint8Array(bufLen);
+    analyser.getByteTimeDomainData(dataArr);
+    const barCount = 48;
+    const barW = 2.5;
+    const gap = (W - barCount * barW) / (barCount + 1);
+    for (let i = 0; i < barCount; i++) {
+      const idx = Math.floor((i / barCount) * bufLen);
+      const v = (dataArr[idx] / 128.0) - 1; // -1 to 1
+      const barH = Math.max(3, Math.abs(v) * H * 0.85);
+      const x = gap + i * (barW + gap);
+      const y = (H - barH) / 2;
+      const alpha = 0.5 + Math.abs(v) * 0.5;
+      ctx.fillStyle = `rgba(239,68,68,${alpha})`;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, barH, 1.5);
+      ctx.fill();
+    }
+    animFrameRef.current = requestAnimationFrame(() => drawWaveform(false));
+  };
+
+  const startWaveform = (stream: MediaStream) => {
+    const audioCtx = new AudioContext();
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    audioCtxRef.current = audioCtx;
+    analyserRef.current = analyser;
+    animFrameRef.current = requestAnimationFrame(() => drawWaveform(false));
+  };
+
+  const stopWaveform = () => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    audioCtxRef.current?.close();
+    analyserRef.current = null;
+    audioCtxRef.current = null;
+    // Clear canvas
+    const canvas = canvasRef.current;
+    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+  };
 
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
@@ -343,6 +409,9 @@ export default function NewSession() {
     if (!recorder || recorder.state !== "recording") return;
     recorder.pause();
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    // Stop waveform animation and draw paused flat line
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    drawWaveform(true);
     setIsPaused(true);
   };
 
@@ -351,6 +420,8 @@ export default function NewSession() {
     if (!recorder || recorder.state !== "paused") return;
     recorder.resume();
     recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    // Restart waveform animation
+    animFrameRef.current = requestAnimationFrame(() => drawWaveform(false));
     setIsPaused(false);
   };
 
@@ -400,6 +471,7 @@ export default function NewSession() {
       setIsRecording(true);
       setRecordingSeconds(0);
       recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+      startWaveform(stream);
     } catch {
       toast.error("Microphone access denied. Please allow microphone access in your browser settings.");
     }
@@ -409,6 +481,7 @@ export default function NewSession() {
     const recorder = mediaRecorderRef.current;
     if (!recorder) return;
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    stopWaveform();
     recorder.onstop = async () => {
       recorder.stream.getTracks().forEach((t) => t.stop());
       setIsRecording(false);
@@ -663,24 +736,34 @@ export default function NewSession() {
 
         {/* Recording / Transcribing status bar */}
         {(isRecording || isTranscribing) && (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: isRecording ? (isPaused ? "color-mix(in oklch, #f59e0b 10%, var(--card))" : "color-mix(in oklch, #ef4444 12%, var(--card))") : "color-mix(in oklch, var(--primary) 10%, var(--card))", border: `1px solid ${isRecording ? (isPaused ? "color-mix(in oklch, #f59e0b 40%, transparent)" : "color-mix(in oklch, #ef4444 40%, transparent)") : "color-mix(in oklch, var(--primary) 30%, transparent)"}`, marginBottom: "12px" }}>
+          <div style={{ borderRadius: "10px", background: isRecording ? (isPaused ? "color-mix(in oklch, #f59e0b 10%, var(--card))" : "color-mix(in oklch, #ef4444 12%, var(--card))") : "color-mix(in oklch, var(--primary) 10%, var(--card))", border: `1px solid ${isRecording ? (isPaused ? "color-mix(in oklch, #f59e0b 40%, transparent)" : "color-mix(in oklch, #ef4444 40%, transparent)") : "color-mix(in oklch, var(--primary) 30%, transparent)"}`, marginBottom: "12px", overflow: "hidden" }}>
             {isRecording ? (
               <>
-                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: isPaused ? "#f59e0b" : "#ef4444", animation: isPaused ? "none" : "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: isPaused ? "#f59e0b" : "#ef4444", letterSpacing: "0.05em" }}>{formatTime(recordingSeconds)}</span>
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "var(--muted-foreground)", flex: 1 }}>{isPaused ? "Paused — tap Resume to continue" : "Recording… tap Stop when done"}</span>
-                <button type="button" onClick={isPaused ? resumeRecording : pauseRecording} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 10px", borderRadius: "7px", background: "var(--secondary)", border: "1px solid var(--border)", color: "var(--foreground)", fontSize: "12px", fontWeight: 500, fontFamily: "var(--font-sans)", cursor: "pointer" }}>
-                  {isPaused ? <><Mic size={11} />Resume</> : <><MicOff size={11} />Pause</>}
-                </button>
-                <button type="button" onClick={stopRecording} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "7px", background: "#ef4444", border: "none", color: "#fff", fontSize: "12px", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer" }}>
-                  <Square size={11} fill="#fff" />Stop
-                </button>
+                {/* Waveform canvas */}
+                <canvas
+                  ref={canvasRef}
+                  width={600}
+                  height={52}
+                  style={{ width: "100%", height: "52px", display: "block" }}
+                />
+                {/* Controls row */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 14px 10px" }}>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: isPaused ? "#f59e0b" : "#ef4444", animation: isPaused ? "none" : "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: isPaused ? "#f59e0b" : "#ef4444", letterSpacing: "0.05em", minWidth: "42px" }}>{formatTime(recordingSeconds)}</span>
+                  <span style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "var(--muted-foreground)", flex: 1 }}>{isPaused ? "Paused — tap Resume to continue" : "Recording…"}</span>
+                  <button type="button" onClick={isPaused ? resumeRecording : pauseRecording} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "5px 10px", borderRadius: "7px", background: "var(--secondary)", border: "1px solid var(--border)", color: "var(--foreground)", fontSize: "12px", fontWeight: 500, fontFamily: "var(--font-sans)", cursor: "pointer" }}>
+                    {isPaused ? <><Mic size={11} />Resume</> : <><MicOff size={11} />Pause</>}
+                  </button>
+                  <button type="button" onClick={stopRecording} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "5px 12px", borderRadius: "7px", background: "#ef4444", border: "none", color: "#fff", fontSize: "12px", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer" }}>
+                    <Square size={11} fill="#fff" />Stop
+                  </button>
+                </div>
               </>
             ) : (
-              <>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px" }}>
                 <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite", color: "var(--primary)", flexShrink: 0 }} />
                 <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", color: "var(--muted-foreground)" }}>Transcribing audio…</span>
-              </>
+              </div>
             )}
           </div>
         )}
