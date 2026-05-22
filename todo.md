@@ -392,3 +392,11 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Dashboard logo link updated to /dashboard
 - [x] Dark/light mode logo in landing nav and footer
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Contact Support Form
+- [x] tRPC support.sendMessage procedure fires notifyOwner with user name, email, subject, message
+- [x] ContactSupportSection added to Settings page under "Support" heading
+- [x] Subject + message form with character counter, validation (min 10 chars on message)
+- [x] Success state shows confirmation card with "Send another" option
+- [x] No email address exposed publicly — notifications go directly to owner
+- [x] 50 tests passing, 0 TypeScript errors

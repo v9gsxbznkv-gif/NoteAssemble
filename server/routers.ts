@@ -24,6 +24,7 @@ import {
   upsertActionItemsForSession,
 } from "./db";
 import { getRecentMeetings, searchMeetings, getTranscriptText } from "./fireflies";
+import { notifyOwner } from "./_core/notification";
 import { stripe, ensureProducts, PLANS, type PlanId } from "./stripe";
 import { updateUserBilling, getUserByStripeCustomerId } from "./db";
 
@@ -764,6 +765,22 @@ export const appRouter = router({
         const text = String(response.choices[0]?.message?.content ?? "").trim();
         if (!text) throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: "No text could be extracted from this image." });
         return { text };
+      }),
+  }),
+  // ─── Support / Contact ────────────────────────────────────────────────────────
+  support: router({
+    /** Send a support message from a logged-in user to the owner via notification. */
+    sendMessage: protectedProcedure
+      .input(z.object({
+        subject: z.string().min(1).max(120),
+        message: z.string().min(10).max(2000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const delivered = await notifyOwner({
+          title: `[Support] ${input.subject}`,
+          content: `From: ${ctx.user.name} (${ctx.user.email})\n\n${input.message}`,
+        });
+        return { success: delivered };
       }),
   }),
 });

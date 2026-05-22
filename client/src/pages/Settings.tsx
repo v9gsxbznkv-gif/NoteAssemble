@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { trpc } from "@/lib/trpc";
@@ -6,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Eye, EyeOff, ExternalLink, ClipboardPaste, Upload, Crown, Smartphone, Download, Share2, Copy, Check } from "lucide-react";
+import { CheckCircle2, XCircle, Eye, EyeOff, ExternalLink, ClipboardPaste, Upload, Crown, Smartphone, Download, Share2, Copy, Check, MessageSquare, Send } from "lucide-react";
 import { useLocation } from "wouter";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // ─── API Key Integrations ─────────────────────────────────────────────────────
 
@@ -532,6 +531,107 @@ function ShareSection() {
   );
 }
 
+// ─── Contact Support Section ──────────────────────────────────────────────────
+
+function ContactSupportSection() {
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const sendMessage = trpc.support.sendMessage.useMutation({
+    onSuccess: () => {
+      setSent(true);
+      setSubject("");
+      setMessage("");
+      toast.success("Message sent! We'll get back to you soon.");
+    },
+    onError: () => toast.error("Failed to send message. Please try again."),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !message.trim()) return;
+    sendMessage.mutate({ subject: subject.trim(), message: message.trim() });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={16} className="text-primary" />
+          <CardTitle className="text-base">Contact Support</CardTitle>
+        </div>
+        <CardDescription className="text-xs">
+          Have a question or issue? Send us a message and we'll get back to you.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {sent ? (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Check size={20} className="text-primary" />
+            </div>
+            <p className="text-sm font-medium">Message received!</p>
+            <p className="text-xs text-muted-foreground">We'll follow up with you directly.</p>
+            <Button variant="outline" size="sm" onClick={() => setSent(false)} className="mt-1">Send another</Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Subject</label>
+              <Input
+                placeholder="e.g. Can't connect Fireflies"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                maxLength={120}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Message</label>
+              <textarea
+                placeholder="Describe your issue or question..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={2000}
+                required
+                rows={4}
+                style={{
+                  width: "100%",
+                  background: "var(--input)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  fontSize: "13px",
+                  color: "var(--foreground)",
+                  fontFamily: "var(--font-sans)",
+                  outline: "none",
+                  resize: "vertical",
+                  boxSizing: "border-box",
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--ring)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+              <p className="text-xs text-muted-foreground mt-1 text-right">{message.length}/2000</p>
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={sendMessage.isPending || !subject.trim() || message.trim().length < 10}
+            >
+              {sendMessage.isPending ? (
+                <span className="flex items-center gap-2"><span className="animate-spin">⏳</span> Sending...</span>
+              ) : (
+                <span className="flex items-center gap-2"><Send size={14} /> Send Message</span>
+              )}
+            </Button>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main Settings Page ──────────────────────────────────────────────────────────────
 
 export default function Settings() {
@@ -608,6 +708,14 @@ export default function Settings() {
             Share &amp; Refer
           </h2>
           <ShareSection />
+        </section>
+
+        {/* Contact Support */}
+        <section className="mt-10">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Support
+          </h2>
+          <ContactSupportSection />
         </section>
 
         {/* Install App */}
