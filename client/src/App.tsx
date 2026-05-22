@@ -13,6 +13,7 @@ import Actions from "./pages/Actions";
 import SharedSession from "./pages/SharedSession";
 import Settings from "./pages/Settings";
 import Pricing from "./pages/Pricing";
+import FloatingRecordingBar from "./components/FloatingRecordingBar";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function App() {
       <ThemeProvider defaultTheme="system" switchable={true}>
         <TooltipProvider>
           <Toaster theme="system" />
+          <FloatingRecordingBar />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

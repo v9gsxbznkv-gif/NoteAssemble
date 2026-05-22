@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Sparkles, FileText, Lock, Flame, Search, X, Tag, ChevronDown, Camera, ClipboardPaste, Loader2, Paperclip, Zap, Mic, MicOff, Square } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useRecording } from "@/contexts/RecordingContext";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
@@ -326,19 +327,18 @@ export default function NewSession() {
   const [isExtractingFile, setIsExtractingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ─── Audio recording state ─────────────────────────────────────────────────
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // ─── Audio recording state (global context — persists across navigation) ──────
+  const rec = useRecording();
+  const isRecording = rec.state === "recording";
+  const isPaused = rec.state === "paused";
+  const isTranscribing = rec.state === "transcribing";
+  const recordingSeconds = rec.elapsed;
+  const mediaRecorderRef = rec.mediaRecorderRef;
+  const analyserRef = rec.analyserRef;
+  const audioCtxRef = rec.audioCtxRef;
+  const animFrameRef = rec.animFrameRef;
   const audioInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const animFrameRef = useRef<number | null>(null);
 
   // ─── Waveform draw loop ────────────────────────────────────────────────────
   const drawWaveform = (paused: boolean) => {
@@ -408,21 +408,19 @@ export default function NewSession() {
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state !== "recording") return;
     recorder.pause();
-    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    // Stop waveform animation and draw paused flat line
+    rec.stopTimer();
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     drawWaveform(true);
-    setIsPaused(true);
+    rec.setState("paused");
   };
 
   const resumeRecording = () => {
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state !== "paused") return;
     recorder.resume();
-    recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
-    // Restart waveform animation
+    rec.startTimer();
     animFrameRef.current = requestAnimationFrame(() => drawWaveform(false));
-    setIsPaused(false);
+    rec.setState("recording");
   };
 
   const transcribeBlob = async (blob: Blob, mimeType: string) => {
@@ -430,7 +428,7 @@ export default function NewSession() {
       toast.error("Audio too large (max 16 MB). Please use a shorter recording.");
       return;
     }
-    setIsTranscribing(true);
+    rec.setState("transcribing");
     try {
       const formData = new FormData();
       const ext = mimeType.includes("mp4") || mimeType.includes("m4a") ? "mp4" : mimeType.includes("wav") ? "wav" : mimeType.includes("ogg") ? "ogg" : "webm";
@@ -444,7 +442,7 @@ export default function NewSession() {
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to transcribe audio");
     } finally {
-      setIsTranscribing(false);
+      rec.setState("idle");
     }
   };
 
@@ -458,19 +456,27 @@ export default function NewSession() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      rec.streamRef.current = stream;
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : MediaRecorder.isTypeSupported("audio/mp4")
         ? "audio/mp4"
         : "";
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      audioChunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      rec.setAudioChunks([]);
+      const localChunks: BlobPart[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          localChunks.push(e.data);
+          rec.setAudioChunks([...localChunks]);
+        }
+      };
       recorder.start(250);
       mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+      rec.setState("recording");
+      rec.setElapsed(0);
+      rec.elapsedRef.current = 0;
+      rec.startTimer();
       startWaveform(stream);
     } catch {
       toast.error("Microphone access denied. Please allow microphone access in your browser settings.");
@@ -480,14 +486,13 @@ export default function NewSession() {
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
     if (!recorder) return;
-    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    rec.stopTimer();
     stopWaveform();
     recorder.onstop = async () => {
-      recorder.stream.getTracks().forEach((t) => t.stop());
-      setIsRecording(false);
-      setIsPaused(false);
+      rec.streamRef.current?.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+      rec.streamRef.current = null;
       const mimeType = recorder.mimeType || "audio/webm";
-      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      const blob = new Blob(rec.audioChunks, { type: mimeType });
       await transcribeBlob(blob, mimeType);
     };
     recorder.stop();

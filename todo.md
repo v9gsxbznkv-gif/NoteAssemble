@@ -347,3 +347,13 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Waveform pauses to amber flat line on Pause, restarts on Resume, clears on Stop
 - [x] No external libraries — pure Web Audio API + requestAnimationFrame
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Persistent Background Recording
+- [x] Create RecordingContext (React context) — holds mediaRecorder ref, audioChunks, isRecording, isPaused, elapsed, analyserNode, stream refs globally
+- [x] Wrap app in RecordingProvider in main.tsx so recording state survives page navigation
+- [x] Add FloatingRecordingBar component (fixed above BottomNav) — shows red pulse + timer + "Tap to return →" — visible on all pages when active
+- [x] Wire NewSession.tsx to use RecordingContext instead of local state for all recording operations
+- [x] Recording continues in background when user navigates away
+- [x] Waveform re-attaches when user returns to /new (canvas draws from live analyser)
+- [x] Tapping the floating bar navigates back to /new
+- [x] 50 tests passing, 0 TypeScript errors
