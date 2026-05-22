@@ -195,15 +195,11 @@ export default function Pricing() {
           })}
         </div>
 
-        {/* Test mode notice */}
         <div className="mt-10 text-center">
           <p className="text-xs text-muted-foreground">
-            Test mode active — use card <span className="font-mono">4242 4242 4242 4242</span> with any future expiry and CVC.
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground">
             Questions?{" "}
-            <a href="mailto:support@noteassemble.com" className="underline hover:text-foreground">
-              support@noteassemble.com
+            <a href="/settings" className="underline hover:text-foreground">
+              Contact support
             </a>
           </p>
         </div>
