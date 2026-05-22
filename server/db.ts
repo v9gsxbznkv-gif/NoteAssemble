@@ -323,3 +323,64 @@ export async function countSessionsThisMonth(userId: number): Promise<number> {
     return ts >= startMs;
   }).length;
 }
+
+// ─── Weekly Digest Helpers ────────────────────────────────────────────────────
+
+/**
+ * Returns all Pro/Team users who have at least one analyzed session
+ * created in the past 7 days, along with those sessions.
+ */
+export async function getProUsersWithRecentSessions(): Promise<
+  Array<{
+    userId: number;
+    userName: string | null;
+    email: string | null;
+    sessions: Array<{ id: number; name: string; aiOutput: string | null; tags: string | null; createdAt: Date }>;
+  }>
+> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  // Get all Pro/Team users
+  const proUsers = await db
+    .select({ id: users.id, name: users.name, email: users.email, plan: users.plan })
+    .from(users)
+    .where(or(eq(users.plan, "pro"), eq(users.plan, "team")));
+
+  if (proUsers.length === 0) return [];
+
+  const result: Array<{
+    userId: number;
+    userName: string | null;
+    email: string | null;
+    sessions: Array<{ id: number; name: string; aiOutput: string | null; tags: string | null; createdAt: Date }>;
+  }> = [];
+
+  for (const user of proUsers) {
+    const recentSessions = await db
+      .select({
+        id: sessions.id,
+        name: sessions.name,
+        aiOutput: sessions.aiOutput,
+        tags: sessions.tags,
+        createdAt: sessions.createdAt,
+      })
+      .from(sessions)
+      .where(and(eq(sessions.userId, user.id), eq(sessions.status, "analyzed")))
+      .orderBy(desc(sessions.createdAt));
+
+    // Filter to past 7 days in JS (same pattern as countSessionsThisMonth)
+    const recent = recentSessions.filter((s) => {
+      const ts = s.createdAt instanceof Date ? s.createdAt.getTime() : 0;
+      return ts >= sevenDaysAgo.getTime();
+    });
+
+    if (recent.length > 0) {
+      result.push({ userId: user.id, userName: user.name, email: user.email, sessions: recent });
+    }
+  }
+
+  return result;
+}

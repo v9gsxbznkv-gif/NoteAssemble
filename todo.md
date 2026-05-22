@@ -400,3 +400,10 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Success state shows confirmation card with "Send another" option
 - [x] No email address exposed publicly — notifications go directly to owner
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Weekly Digest Email (Pro)
+- [ ] DB helper: getProUsersWithRecentSessions (sessions in past 7 days, Pro plan only)
+- [ ] /api/scheduled/weeklyDigest Express handler with AI summary per user
+- [ ] Handler registered in server/_core/index.ts
+- [ ] Project-level Heartbeat cron created via CLI (Monday 9am UTC)
+- [ ] Digest delivered via notifyOwner per user
