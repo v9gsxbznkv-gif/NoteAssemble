@@ -164,7 +164,7 @@ export default function Landing() {
               transition: "opacity 0.15s",
             }}
           >
-            Start Free — No Credit Card
+            Start Free
           </a>
           <a
             href="/pricing"
@@ -181,7 +181,7 @@ export default function Landing() {
         </div>
 
         <p style={{ fontSize: "12px", color: "var(--muted-foreground)", marginTop: "16px" }}>
-          Free plan includes 10 sessions/month. No credit card required.
+          Free plan includes 10 sessions/month.
         </p>
       </section>
 
@@ -389,7 +389,7 @@ export default function Landing() {
           Get Started Free
         </a>
         <p style={{ fontSize: "12px", color: "var(--muted-foreground)", marginTop: "14px" }}>
-          Free forever. No credit card. Takes 30 seconds.
+          Free to start. Takes 30 seconds.
         </p>
       </section>
 
