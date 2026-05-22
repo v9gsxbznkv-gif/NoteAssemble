@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Eye, EyeOff, ExternalLink, ClipboardPaste, Upload } from "lucide-react";
+import { CheckCircle2, XCircle, Eye, EyeOff, ExternalLink, ClipboardPaste, Upload, Crown, Smartphone, Download } from "lucide-react";
+import { useLocation } from "wouter";
+import { useEffect, useRef } from "react";
 
 // ─── API Key Integrations ─────────────────────────────────────────────────────
 
@@ -285,7 +287,141 @@ function PasteServiceCard({ service }: { service: PasteService }) {
   );
 }
 
-// ─── Main Settings Page ───────────────────────────────────────────────────────
+// ─── Billing Section ──────────────────────────────────────────────────────────────
+
+function BillingSection() {
+  const [, navigate] = useLocation();
+  const { data: billing, isLoading } = trpc.billing.getStatus.useQuery();
+  const createPortal = trpc.billing.createPortalSession.useMutation({
+    onSuccess: (data) => { if (data.url) window.open(data.url, "_blank"); },
+    onError: (err) => toast.error(err.message || "Failed to open billing portal"),
+  });
+
+  const plan = billing?.plan ?? "free";
+  const planLabel = plan === "pro" ? "Pro" : plan === "team" ? "Team" : "Free";
+  const isPaid = plan !== "free";
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Crown className="w-4 h-4 text-amber-500" />
+          <CardTitle className="text-base">Subscription</CardTitle>
+        </div>
+        <CardDescription>Manage your NoteAssemble plan.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="h-8 w-32 rounded bg-muted/40 animate-pulse" />
+        ) : (
+          <div className="flex items-center gap-3">
+            <Badge variant={isPaid ? "default" : "secondary"} className={isPaid ? "bg-amber-600 text-white" : ""}>
+              {planLabel}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {plan === "free" ? "10 sessions/month" : "Unlimited sessions"}
+            </span>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {!isPaid && (
+            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => navigate("/pricing")}>
+              Upgrade Plan
+            </Button>
+          )}
+          {isPaid && (
+            <Button size="sm" variant="outline" disabled={createPortal.isPending} onClick={() => createPortal.mutate({ origin: window.location.origin })}>
+              {createPortal.isPending ? "Opening..." : "Manage Billing"}
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => navigate("/pricing")}>
+            View Plans
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── PWA Install Section ──────────────────────────────────────────────────────────────
+
+function InstallAppSection() {
+  const deferredPrompt = useRef<Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> } | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+      return;
+    }
+    // iOS detection
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
+    setIsIOS(ios);
+    // Chrome/Edge install prompt
+    const handler = (e: Event) => {
+      e.preventDefault();
+      deferredPrompt.current = e as typeof deferredPrompt.current;
+      setCanInstall(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  async function handleInstall() {
+    if (!deferredPrompt.current) return;
+    await deferredPrompt.current.prompt();
+    const choice = await deferredPrompt.current.userChoice;
+    if (choice.outcome === "accepted") {
+      setIsInstalled(true);
+      setCanInstall(false);
+      toast.success("NoteAssemble installed to your home screen!");
+    }
+    deferredPrompt.current = null;
+  }
+
+  if (isInstalled) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Smartphone className="w-4 h-4 text-blue-500" />
+          <CardTitle className="text-base">Install App</CardTitle>
+        </div>
+        <CardDescription>Add NoteAssemble to your home screen for quick access.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {canInstall && (
+          <Button size="sm" onClick={handleInstall} className="gap-2">
+            <Download className="w-4 h-4" />
+            Install NoteAssemble
+          </Button>
+        )}
+        {isIOS && !canInstall && (
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">Install on iPhone / iPad:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Tap the <strong>Share</strong> button in Safari (box with arrow)</li>
+              <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+              <li>Tap <strong>Add</strong> — done</li>
+            </ol>
+          </div>
+        )}
+        {!canInstall && !isIOS && (
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>Open NoteAssemble in Chrome or Edge on your device.</p>
+            <p>Look for the install icon (<strong>⋮</strong> menu → <strong>Install app</strong>) in the address bar.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Settings Page ──────────────────────────────────────────────────────────────
 
 export default function Settings() {
   const { data: keys, isLoading } = trpc.integrations.getKeys.useQuery();
@@ -344,6 +480,22 @@ export default function Settings() {
               <PasteServiceCard key={s.name} service={s} />
             ))}
           </div>
+        </section>
+
+        {/* Billing */}
+        <section className="mt-10">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Plan &amp; Billing
+          </h2>
+          <BillingSection />
+        </section>
+
+        {/* Install App */}
+        <section className="mt-10 mb-8">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+            Install App
+          </h2>
+          <InstallAppSection />
         </section>
       </div>
     </div>

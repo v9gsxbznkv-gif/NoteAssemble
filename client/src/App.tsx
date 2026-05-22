@@ -12,6 +12,7 @@ import SessionDetail from "./pages/SessionDetail";
 import Actions from "./pages/Actions";
 import SharedSession from "./pages/SharedSession";
 import Settings from "./pages/Settings";
+import Pricing from "./pages/Pricing";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/actions" component={Actions} />
       <Route path="/share/:token" component={SharedSession} />
       <Route path="/settings" component={Settings} />
+      <Route path="/pricing" component={Pricing} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

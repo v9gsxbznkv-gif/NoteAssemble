@@ -22,6 +22,8 @@ import {
   upsertActionItemsForSession,
 } from "./db";
 import { getRecentMeetings, searchMeetings, getTranscriptText } from "./fireflies";
+import { stripe, ensureProducts, PLANS, type PlanId } from "./stripe";
+import { getUserBilling, updateUserBilling, getUserByStripeCustomerId } from "./db";
 
 // ─── AI Prompt & Schema ────────────────────────────────────────────────────────
 
@@ -639,6 +641,76 @@ export const appRouter = router({
         const textLines = lines.filter(l => l.trim() && !l.startsWith('WEBVTT') && !l.match(/^\d+$/) && !l.match(/^\d{2}:\d{2}/));
         const transcript = textLines.join(' ').replace(/\s+/g, ' ').trim();
         return { transcript, title: input.subject };
+      }),
+  }),
+
+  // ─── Billing ──────────────────────────────────────────────────────────────
+  billing: router({
+    /** Get current user's plan and billing status */
+    getStatus: protectedProcedure.query(async ({ ctx }) => {
+      const billing = await getUserBilling(ctx.user.id);
+      return {
+        plan: (billing?.plan ?? "free") as PlanId,
+        stripeCustomerId: billing?.stripeCustomerId ?? null,
+        stripeSubscriptionId: billing?.stripeSubscriptionId ?? null,
+        planExpiresAt: billing?.planExpiresAt ?? null,
+        plans: PLANS,
+      };
+    }),
+
+    /** Create a Stripe Checkout session for upgrading to Pro or Team */
+    createCheckoutSession: protectedProcedure
+      .input(z.object({ planKey: z.enum(["pro", "team"]), origin: z.string().url() }))
+      .mutation(async ({ ctx, input }) => {
+        const priceIds = await ensureProducts();
+        const priceId = priceIds[input.planKey];
+        if (!priceId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Price not found" });
+
+        const billing = await getUserBilling(ctx.user.id);
+        let customerId = billing?.stripeCustomerId ?? undefined;
+
+        // Create or reuse Stripe customer
+        if (!customerId) {
+          const customer = await stripe.customers.create({
+            email: ctx.user.email ?? undefined,
+            name: ctx.user.name ?? undefined,
+            metadata: { user_id: String(ctx.user.id) },
+          });
+          customerId = customer.id;
+          await updateUserBilling(ctx.user.id, { stripeCustomerId: customerId });
+        }
+
+        const session = await stripe.checkout.sessions.create({
+          customer: customerId,
+          mode: "subscription",
+          line_items: [{ price: priceId, quantity: 1 }],
+          success_url: `${input.origin}/settings?billing=success`,
+          cancel_url: `${input.origin}/pricing`,
+          allow_promotion_codes: true,
+          client_reference_id: String(ctx.user.id),
+          metadata: {
+            user_id: String(ctx.user.id),
+            plan_key: input.planKey,
+            customer_email: ctx.user.email ?? "",
+          },
+        });
+
+        return { url: session.url };
+      }),
+
+    /** Create a Stripe Customer Portal session for managing subscription */
+    createPortalSession: protectedProcedure
+      .input(z.object({ origin: z.string().url() }))
+      .mutation(async ({ ctx, input }) => {
+        const billing = await getUserBilling(ctx.user.id);
+        if (!billing?.stripeCustomerId) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No billing account found" });
+        }
+        const session = await stripe.billingPortal.sessions.create({
+          customer: billing.stripeCustomerId,
+          return_url: `${input.origin}/settings`,
+        });
+        return { url: session.url };
       }),
   }),
 

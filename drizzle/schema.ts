@@ -16,6 +16,11 @@ export const users = mysqlTable("users", {
   granolaApiKey: varchar("granolaApiKey", { length: 255 }), // user's Granola personal API key
   zoomApiKey: varchar("zoomApiKey", { length: 512 }), // user's Zoom Server-to-Server OAuth token or JWT
   teamsApiKey: varchar("teamsApiKey", { length: 512 }), // user's Microsoft Teams (Graph API) access token
+  // Stripe billing
+  plan: mysqlEnum("plan", ["free", "pro", "team"]).default("free").notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+  planExpiresAt: bigint("planExpiresAt", { mode: "number" }), // UTC ms, null = no expiry
 });
 
 export type User = typeof users.$inferSelect;

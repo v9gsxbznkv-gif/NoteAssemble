@@ -294,3 +294,23 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] On Save Draft: if name field is blank, call generateTitle first, populate name, then save
 - [x] Show subtle loading indicator in the name field while title is being generated
 - [x] Write vitest tests for generateTitle procedure (5 tests: LLM title, notes-only, empty inputs, quote stripping, empty LLM response)
+
+## Feature: Stripe Subscription Billing
+- [x] Add Stripe feature scaffold via webdev_add_feature (sandbox provisioned)
+- [x] Create Stripe products/prices: Free (0), Pro ($12/mo), Team ($29/mo) via ensureProducts() in server/stripe.ts
+- [x] Add subscription columns to users table (plan, stripeCustomerId, stripeSubscriptionId, planExpiresAt)
+- [x] Generate and apply DB migration for subscription columns (migration 0010)
+- [x] Add tRPC procedures: billing.createCheckoutSession, billing.createPortalSession, billing.getStatus
+- [x] Add Stripe webhook handler for subscription lifecycle events (checkout.session.completed, customer.subscription.updated, customer.subscription.deleted)
+- [x] Build /pricing page with plan comparison table and upgrade CTAs
+- [ ] Gate features: Free = 10 sessions/mo, Pro = unlimited sessions, Team = unlimited + sharing
+- [ ] Show upgrade prompt when free limit is hit
+- [x] Show current plan badge in Settings page (Plan & Billing section)
+- [ ] Write vitest tests for billing procedures
+
+## Feature: PWA Install Support
+- [x] Verify/update manifest.json with correct icons, theme color, display: standalone
+- [x] Register service worker for offline shell caching (already in sw.js)
+- [x] Add beforeinstallprompt handler — Install App section in Settings page
+- [x] Add apple-touch-icon and iOS meta tags for Safari Add to Home Screen (already in index.html)
+- [x] iOS step-by-step instructions in Settings → Install App section
