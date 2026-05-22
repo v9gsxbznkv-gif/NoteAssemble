@@ -333,3 +333,10 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] On success: append Whisper transcript to transcript field, show toast with duration
 - [x] Handle errors: mic permission denied, file too large, transcription failure (toast messages)
 - [x] 50 tests passing, 0 TypeScript errors
+
+## Feature: Audio Recording Enhancements
+- [x] Add Pause/Resume button during active recording (MediaRecorder.pause/resume) — appears in both button row and status bar
+- [x] Show paused state visually (timer freezes, amber dot, "Paused — tap Resume to continue" message)
+- [x] Add "Upload Audio" button — file picker for .mp3, .m4a, .wav, .webm, .ogg up to 16MB — transcribes via /api/transcribe-audio
+- [x] Shared transcribeBlob() helper used by both live recording and file upload
+- [x] 50 tests passing, 0 TypeScript errors

@@ -328,13 +328,61 @@ export default function NewSession() {
 
   // ─── Audio recording state ─────────────────────────────────────────────────
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  const pauseRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state !== "recording") return;
+    recorder.pause();
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    setIsPaused(true);
+  };
+
+  const resumeRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state !== "paused") return;
+    recorder.resume();
+    recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    setIsPaused(false);
+  };
+
+  const transcribeBlob = async (blob: Blob, mimeType: string) => {
+    if (blob.size > 16 * 1024 * 1024) {
+      toast.error("Audio too large (max 16 MB). Please use a shorter recording.");
+      return;
+    }
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      const ext = mimeType.includes("mp4") || mimeType.includes("m4a") ? "mp4" : mimeType.includes("wav") ? "wav" : mimeType.includes("ogg") ? "ogg" : "webm";
+      formData.append("audio", blob, `audio.${ext}`);
+      const res = await fetch("/api/transcribe-audio", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Transcription failed");
+      setTranscript((prev) => prev ? prev + "\n\n" + data.transcript : data.transcript);
+      const dur = data.duration ? ` (${Math.round(data.duration)}s)` : "";
+      toast.success(`Audio transcribed${dur}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to transcribe audio");
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (audioInputRef.current) audioInputRef.current.value = "";
+    if (!file) return;
+    await transcribeBlob(file, file.type || "audio/mpeg");
+  };
 
   const startRecording = async () => {
     try {
@@ -360,33 +408,14 @@ export default function NewSession() {
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
     if (!recorder) return;
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     recorder.onstop = async () => {
-      // Stop all tracks to release mic
       recorder.stream.getTracks().forEach((t) => t.stop());
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       setIsRecording(false);
+      setIsPaused(false);
       const mimeType = recorder.mimeType || "audio/webm";
       const blob = new Blob(audioChunksRef.current, { type: mimeType });
-      if (blob.size > 16 * 1024 * 1024) {
-        toast.error("Recording too large (max 16 MB). Please record shorter segments.");
-        return;
-      }
-      setIsTranscribing(true);
-      try {
-        const formData = new FormData();
-        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        formData.append("audio", blob, `recording.${ext}`);
-        const res = await fetch("/api/transcribe-audio", { method: "POST", body: formData });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Transcription failed");
-        setTranscript((prev) => prev ? prev + "\n\n" + data.transcript : data.transcript);
-        const dur = data.duration ? ` (${Math.round(data.duration)}s)` : "";
-        toast.success(`Recording transcribed${dur}`);
-      } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Failed to transcribe recording");
-      } finally {
-        setIsTranscribing(false);
-      }
+      await transcribeBlob(blob, mimeType);
     };
     recorder.stop();
   };
@@ -565,7 +594,8 @@ export default function NewSession() {
               <FileText size={12} />
               Meeting Transcript
             </label>
-            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+              {/* Record / Stop button */}
               <button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
@@ -575,11 +605,43 @@ export default function NewSession() {
                 {isTranscribing ? (
                   <><Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />Transcribing…</>
                 ) : isRecording ? (
-                  <><Square size={11} fill="#ef4444" style={{ flexShrink: 0 }} /><span style={{ animation: "pulse 1s ease-in-out infinite" }}>{formatTime(recordingSeconds)}</span> Stop</>
+                  <><Square size={11} fill="#ef4444" style={{ flexShrink: 0 }} />
+                    <span style={{ animation: isPaused ? "none" : "pulse 1s ease-in-out infinite", opacity: isPaused ? 0.5 : 1 }}>{formatTime(recordingSeconds)}</span>
+                    Stop</>
                 ) : (
-                  <><Mic size={13} />Record</>  
+                  <><Mic size={13} />Record</>
                 )}
               </button>
+              {/* Pause / Resume button — only shown while recording */}
+              {isRecording && (
+                <button
+                  type="button"
+                  onClick={isPaused ? resumeRecording : pauseRecording}
+                  style={{ display: "flex", alignItems: "center", gap: "5px", padding: "7px 11px", borderRadius: "8px", background: "var(--secondary)", border: "1px solid var(--border)", color: "var(--muted-foreground)", fontSize: "12px", fontWeight: 500, fontFamily: "var(--font-sans)", cursor: "pointer", whiteSpace: "nowrap" }}
+                >
+                  {isPaused ? <><Mic size={12} />Resume</> : <><MicOff size={12} />Pause</>}
+                </button>
+              )}
+              {/* Upload existing audio file */}
+              {!isRecording && (
+                <>
+                  <input
+                    ref={audioInputRef}
+                    type="file"
+                    accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg"
+                    style={{ display: "none" }}
+                    onChange={handleAudioFileUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => audioInputRef.current?.click()}
+                    disabled={isTranscribing}
+                    style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", borderRadius: "8px", background: "var(--secondary)", border: "1px solid var(--border)", color: "var(--muted-foreground)", fontSize: "12px", fontWeight: 500, fontFamily: "var(--font-sans)", cursor: isTranscribing ? "not-allowed" : "pointer", whiteSpace: "nowrap", opacity: isTranscribing ? 0.5 : 1 }}
+                  >
+                    <Paperclip size={12} />Upload Audio
+                  </button>
+                </>
+              )}
               <FirefliesPicker onSelect={handleFirefliesSelect} />
             </div>
           </div>
@@ -599,14 +661,17 @@ export default function NewSession() {
           )}
         </div>
 
-        {/* Record button — above transcript */}
+        {/* Recording / Transcribing status bar */}
         {(isRecording || isTranscribing) && (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: isRecording ? "color-mix(in oklch, #ef4444 12%, var(--card))" : "color-mix(in oklch, var(--primary) 10%, var(--card))", border: `1px solid ${isRecording ? "color-mix(in oklch, #ef4444 40%, transparent)" : "color-mix(in oklch, var(--primary) 30%, transparent)"}`, marginBottom: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: isRecording ? (isPaused ? "color-mix(in oklch, #f59e0b 10%, var(--card))" : "color-mix(in oklch, #ef4444 12%, var(--card))") : "color-mix(in oklch, var(--primary) 10%, var(--card))", border: `1px solid ${isRecording ? (isPaused ? "color-mix(in oklch, #f59e0b 40%, transparent)" : "color-mix(in oklch, #ef4444 40%, transparent)") : "color-mix(in oklch, var(--primary) 30%, transparent)"}`, marginBottom: "12px" }}>
             {isRecording ? (
               <>
-                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: "#ef4444", letterSpacing: "0.05em" }}>{formatTime(recordingSeconds)}</span>
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "var(--muted-foreground)", flex: 1 }}>Recording… tap Stop when done</span>
+                <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: isPaused ? "#f59e0b" : "#ef4444", animation: isPaused ? "none" : "pulse 1s ease-in-out infinite", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: isPaused ? "#f59e0b" : "#ef4444", letterSpacing: "0.05em" }}>{formatTime(recordingSeconds)}</span>
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "var(--muted-foreground)", flex: 1 }}>{isPaused ? "Paused — tap Resume to continue" : "Recording… tap Stop when done"}</span>
+                <button type="button" onClick={isPaused ? resumeRecording : pauseRecording} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 10px", borderRadius: "7px", background: "var(--secondary)", border: "1px solid var(--border)", color: "var(--foreground)", fontSize: "12px", fontWeight: 500, fontFamily: "var(--font-sans)", cursor: "pointer" }}>
+                  {isPaused ? <><Mic size={11} />Resume</> : <><MicOff size={11} />Pause</>}
+                </button>
                 <button type="button" onClick={stopRecording} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "6px 12px", borderRadius: "7px", background: "#ef4444", border: "none", color: "#fff", fontSize: "12px", fontWeight: 600, fontFamily: "var(--font-sans)", cursor: "pointer" }}>
                   <Square size={11} fill="#fff" />Stop
                 </button>
@@ -614,7 +679,7 @@ export default function NewSession() {
             ) : (
               <>
                 <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite", color: "var(--primary)", flexShrink: 0 }} />
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", color: "var(--muted-foreground)" }}>Transcribing recording…</span>
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "13px", color: "var(--muted-foreground)" }}>Transcribing audio…</span>
               </>
             )}
           </div>
