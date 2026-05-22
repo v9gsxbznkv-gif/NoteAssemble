@@ -71,7 +71,8 @@ export default function Landing() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, loading, navigate]);
 
-  if (loading) return null;
+  // Don't block render while auth loads — show landing page immediately.
+  // Authenticated users are redirected by the useEffect above once loading completes.
 
   return (
     <div style={{ fontFamily: "var(--font-sans)", background: "var(--background)", color: "var(--foreground)", overflowX: "hidden" }}>

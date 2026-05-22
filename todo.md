@@ -407,3 +407,10 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [ ] Handler registered in server/_core/index.ts
 - [ ] Project-level Heartbeat cron created via CLI (Monday 9am UTC)
 - [ ] Digest delivered via notifyOwner per user
+
+## Feature: SEO
+- [x] sitemap.xml at /sitemap.xml listing / and /pricing
+- [x] robots.txt with Sitemap reference
+- [x] JSON-LD SoftwareApplication schema in index.html
+- [x] JSON-LD FAQPage schema in index.html (5 questions)
+- [x] Open Graph + Twitter Card meta tags
