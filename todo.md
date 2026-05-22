@@ -414,3 +414,11 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] JSON-LD SoftwareApplication schema in index.html
 - [x] JSON-LD FAQPage schema in index.html (5 questions)
 - [x] Open Graph + Twitter Card meta tags
+
+## Feature: SEO Landing Pages
+- [x] /for/pastors — AI meeting notes for pastors
+- [x] /for/church-staff — church staff meeting summary tool
+- [x] /for/consultants — AI meeting notes for consultants
+- [x] /for/executive-pastors — AI notes for executive pastors
+- [x] /compare/fireflies-alternative — Fireflies alternative page
+- [x] sitemap.xml updated with all 7 URLs

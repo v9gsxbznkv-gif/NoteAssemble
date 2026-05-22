@@ -15,6 +15,11 @@ import SharedSession from "./pages/SharedSession";
 import Settings from "./pages/Settings";
 import Pricing from "./pages/Pricing";
 import FloatingRecordingBar from "./components/FloatingRecordingBar";
+import ForPastors from "./pages/seo/ForPastors";
+import ForChurchStaff from "./pages/seo/ForChurchStaff";
+import ForConsultants from "./pages/seo/ForConsultants";
+import ForExecutivePastors from "./pages/seo/ForExecutivePastors";
+import FirefliesAlternative from "./pages/seo/FirefliesAlternative";
 
 function Router() {
   return (
@@ -29,6 +34,11 @@ function Router() {
       <Route path="/share/:token" component={SharedSession} />
       <Route path="/settings" component={Settings} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/for/pastors" component={ForPastors} />
+      <Route path="/for/church-staff" component={ForChurchStaff} />
+      <Route path="/for/consultants" component={ForConsultants} />
+      <Route path="/for/executive-pastors" component={ForExecutivePastors} />
+      <Route path="/compare/fireflies-alternative" component={FirefliesAlternative} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
