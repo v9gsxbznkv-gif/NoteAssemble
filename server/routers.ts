@@ -8,12 +8,14 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import {
   clearUserIntegrationKey,
+  countSessionsThisMonth,
   createSession,
   deleteSession,
   getOpenActionItems,
   getSessionById,
   getSessionByShareToken,
   getSessionsByUser,
+  getUserBilling,
   getUserIntegrationKeys,
   setActionItemDueDate,
   setUserIntegrationKey,
@@ -23,7 +25,7 @@ import {
 } from "./db";
 import { getRecentMeetings, searchMeetings, getTranscriptText } from "./fireflies";
 import { stripe, ensureProducts, PLANS, type PlanId } from "./stripe";
-import { getUserBilling, updateUserBilling, getUserByStripeCustomerId } from "./db";
+import { updateUserBilling, getUserByStripeCustomerId } from "./db";
 
 // ─── AI Prompt & Schema ────────────────────────────────────────────────────────
 
@@ -350,6 +352,18 @@ export const appRouter = router({
         tags: z.array(z.string()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // Enforce free plan session limit (10/month)
+        const billing = await getUserBilling(ctx.user.id);
+        const plan = (billing?.plan ?? "free") as PlanId;
+        if (plan === "free") {
+          const count = await countSessionsThisMonth(ctx.user.id);
+          if (count >= 10) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "FREE_LIMIT_REACHED",
+            });
+          }
+        }
         const id = await createSession({
           userId: ctx.user.id,
           name: input.name,
@@ -649,12 +663,16 @@ export const appRouter = router({
     /** Get current user's plan and billing status */
     getStatus: protectedProcedure.query(async ({ ctx }) => {
       const billing = await getUserBilling(ctx.user.id);
+      const plan = (billing?.plan ?? "free") as PlanId;
+      const sessionsThisMonth = plan === "free" ? await countSessionsThisMonth(ctx.user.id) : null;
       return {
-        plan: (billing?.plan ?? "free") as PlanId,
+        plan,
         stripeCustomerId: billing?.stripeCustomerId ?? null,
         stripeSubscriptionId: billing?.stripeSubscriptionId ?? null,
         planExpiresAt: billing?.planExpiresAt ?? null,
         plans: PLANS,
+        sessionsThisMonth,
+        sessionLimit: plan === "free" ? 10 : null,
       };
     }),
 

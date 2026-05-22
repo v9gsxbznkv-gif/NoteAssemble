@@ -303,10 +303,10 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Add tRPC procedures: billing.createCheckoutSession, billing.createPortalSession, billing.getStatus
 - [x] Add Stripe webhook handler for subscription lifecycle events (checkout.session.completed, customer.subscription.updated, customer.subscription.deleted)
 - [x] Build /pricing page with plan comparison table and upgrade CTAs
-- [ ] Gate features: Free = 10 sessions/mo, Pro = unlimited sessions, Team = unlimited + sharing
-- [ ] Show upgrade prompt when free limit is hit
-- [x] Show current plan badge in Settings page (Plan & Billing section)
-- [ ] Write vitest tests for billing procedures
+  - [x] Gate features: Free = 10 sessions/mo, Pro = unlimited sessions, Team = unlimited + sharing
+  - [x] Show upgrade prompt when free limit is hit (upgrade dialog in NewSession.tsx)
+  - [x] Show current plan badge in Settings page (Plan & Billing section)
+  - [x] Write vitest tests for billing procedures (getUserBilling + countSessionsThisMonth mocks added, 50 tests passing)
 
 ## Feature: PWA Install Support
 - [x] Verify/update manifest.json with correct icons, theme color, display: standalone
@@ -314,3 +314,13 @@ Note: These require user confirmation before building (Notion needs OAuth scope 
 - [x] Add beforeinstallprompt handler — Install App section in Settings page
 - [x] Add apple-touch-icon and iOS meta tags for Safari Add to Home Screen (already in index.html)
 - [x] iOS step-by-step instructions in Settings → Install App section
+
+## Feature: Session Gating + Promo Codes
+- [x] Create FOUNDER promo code in Stripe (100% off Pro forever, unlimited redemptions) — promo_1TZt6hGg5yfCsurU5sYJCdJC
+- [x] Create BETA promo code in Stripe (100% off Pro for 3 months)
+- [x] Add session count check in sessions.create procedure — free users capped at 10/month, throws FREE_LIMIT_REACHED
+- [x] Add sessionsThisMonth + sessionLimit to billing.getStatus response
+- [x] Show session usage progress bar on Dashboard (X/10 sessions, turns red at limit, Upgrade link)
+- [x] Show upgrade modal on New Session page when free user hits the limit (dialog with Upgrade to Pro CTA)
+- [x] Allow promo code entry on Stripe checkout (allow_promotion_codes: true)
+- [x] Fix sessions.test.ts db mock to include getUserBilling + countSessionsThisMonth (50 tests passing)

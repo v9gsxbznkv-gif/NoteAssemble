@@ -1,10 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Sparkles, FileText, Lock, Flame, Search, X, Tag, ChevronDown, Camera, ClipboardPaste, Loader2, Paperclip } from "lucide-react";
+import { ArrowLeft, Sparkles, FileText, Lock, Flame, Search, X, Tag, ChevronDown, Camera, ClipboardPaste, Loader2, Paperclip, Zap } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // ─── Preset tags ───────────────────────────────────────────────────────────────
 const PRESET_TAGS = ["Church", "Real Estate", "Consulting", "Construction", "STR", "Personal"];
@@ -355,10 +357,21 @@ export default function NewSession() {
   }, [isAuthenticated, authLoading, navigate]);
 
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const utils = trpc.useUtils();
   const createSession = trpc.sessions.create.useMutation();
   const analyzeSession = trpc.sessions.analyze.useMutation();
   const generateTitle = trpc.sessions.generateTitle.useMutation();
+  const createCheckout = trpc.billing.createCheckoutSession.useMutation();
+
+  const handleUpgrade = async () => {
+    try {
+      const { url } = await createCheckout.mutateAsync({ planKey: "pro", origin: window.location.origin });
+      if (url) window.open(url, "_blank");
+    } catch {
+      toast.error("Could not open checkout. Please try again.");
+    }
+  };
 
   /** Returns the name to use — auto-generates one if the field is blank. */
   const resolveTitle = async (): Promise<string | null> => {
@@ -401,7 +414,12 @@ export default function NewSession() {
       toast.success("Analysis complete.");
       navigate(`/session/${id}`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Analysis failed. Please try again.");
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("FREE_LIMIT_REACHED")) {
+        setShowUpgradeDialog(true);
+      } else {
+        toast.error(msg || "Analysis failed. Please try again.");
+      }
     } finally {
       setIsAnalyzing(false);
     }
@@ -415,8 +433,13 @@ export default function NewSession() {
       await utils.sessions.list.invalidate();
       toast.success("Draft saved.");
       navigate(`/session/${id}`);
-    } catch {
-      toast.error("Failed to save draft.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("FREE_LIMIT_REACHED")) {
+        setShowUpgradeDialog(true);
+      } else {
+        toast.error("Failed to save draft.");
+      }
     }
   };
 
@@ -578,6 +601,34 @@ export default function NewSession() {
           onClose={() => setShowPasteModal(false)}
         />
       )}
+
+      {/* Free Plan Upgrade Dialog */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap size={18} className="text-amber-500" />
+              You've hit your free limit
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Free accounts can create up to <strong>10 sessions per month</strong>. Upgrade to Pro for unlimited sessions, all integrations, and priority support.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-2">
+            <Button
+              onClick={handleUpgrade}
+              disabled={createCheckout.isPending}
+              className="w-full"
+            >
+              {createCheckout.isPending ? <Loader2 size={16} className="animate-spin mr-2" /> : <Zap size={16} className="mr-2" />}
+              Upgrade to Pro — $12/mo
+            </Button>
+            <Button variant="outline" onClick={() => setShowUpgradeDialog(false)} className="w-full">
+              Maybe later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

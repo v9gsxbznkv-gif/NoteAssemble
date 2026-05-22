@@ -70,6 +70,10 @@ vi.mock("./db", () => ({
   }),
   setUserIntegrationKey: vi.fn().mockResolvedValue(undefined),
   clearUserIntegrationKey: vi.fn().mockResolvedValue(undefined),
+  getUserBilling: vi.fn().mockResolvedValue({ plan: "pro", stripeCustomerId: null, stripeSubscriptionId: null, planExpiresAt: null }),
+  countSessionsThisMonth: vi.fn().mockResolvedValue(0),
+  updateUserBilling: vi.fn().mockResolvedValue(undefined),
+  getUserByStripeCustomerId: vi.fn().mockResolvedValue(null),
 }));
 
 // ─── Mock LLM ─────────────────────────────────────────────────────────────────

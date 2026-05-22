@@ -1,9 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Search, Plus, ChevronRight, Brain, Calendar, Tag } from "lucide-react";
+import { Search, Plus, ChevronRight, Brain, Calendar, Tag, Zap } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import AppShell from "@/components/AppShell";
+import { toast } from "sonner";
 
 const PRESET_TAGS = ["Church", "Real Estate", "Consulting", "Construction", "STR", "Personal"];
 
@@ -146,6 +147,11 @@ export default function Dashboard() {
     { search: search || undefined },
     { enabled: isAuthenticated }
   );
+  const { data: billing } = trpc.billing.getStatus.useQuery(undefined, { enabled: isAuthenticated });
+  const createCheckout = trpc.billing.createCheckoutSession.useMutation({
+    onSuccess: ({ url }) => { if (url) window.open(url, "_blank"); },
+    onError: () => toast.error("Could not open checkout. Please try again."),
+  });
 
   const allTags = useMemo(() => {
     if (!sessions) return [];
@@ -213,6 +219,26 @@ export default function Dashboard() {
             {filteredSessions?.length ?? 0} session{filteredSessions?.length !== 1 ? "s" : ""}{activeTag ? ` · ${activeTag}` : " captured"}
           </p>
         </div>
+
+        {/* Free plan usage bar */}
+        {billing?.plan === "free" && billing.sessionsThisMonth !== null && (
+          <div style={{ marginBottom: "16px", padding: "12px 14px", background: "var(--secondary)", borderRadius: "10px", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <span style={{ fontSize: "12px", color: "var(--muted-foreground)", fontFamily: "var(--font-sans)" }}>
+                {billing.sessionsThisMonth} / 10 sessions this month
+              </span>
+              <button
+                onClick={() => createCheckout.mutate({ planKey: "pro", origin: window.location.origin })}
+                style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "var(--font-sans)" }}
+              >
+                <Zap size={11} /> Upgrade
+              </button>
+            </div>
+            <div style={{ height: "4px", background: "var(--border)", borderRadius: "2px", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${Math.min(100, (billing.sessionsThisMonth / 10) * 100)}%`, background: billing.sessionsThisMonth >= 10 ? "var(--destructive)" : "var(--primary)", borderRadius: "2px", transition: "width 0.3s" }} />
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div style={{ position: "relative", marginBottom: "16px" }}>

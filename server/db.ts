@@ -312,10 +312,14 @@ export async function countSessionsThisMonth(userId: number): Promise<number> {
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
+  const startMs = startOfMonth.getTime();
   const result = await db
-    .select({ id: sessions.id })
+    .select({ id: sessions.id, createdAt: sessions.createdAt })
     .from(sessions)
-    .where(and(eq(sessions.userId, userId)));
-  // Filter in JS since drizzle mysql doesn't easily support gte on timestamp
-  return result.length; // We'll track by total for simplicity; can refine later
+    .where(eq(sessions.userId, userId));
+  // Filter in JS: count only sessions created this calendar month
+  return result.filter((s) => {
+    const ts = s.createdAt instanceof Date ? s.createdAt.getTime() : (s.createdAt ?? 0);
+    return ts >= startMs;
+  }).length;
 }
