@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Search, Plus, ChevronRight, Brain, Calendar, Tag, Zap } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 
@@ -220,12 +220,14 @@ export default function Dashboard() {
               {filteredSessions?.length ?? 0} session{filteredSessions?.length !== 1 ? "s" : ""}{activeTag ? ` · ${activeTag}` : " captured"}
             </p>
           </div>
-          {/* NoteAssemble logo icon */}
-          <img
-            src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
-            alt="NoteAssemble"
-            style={{ width: "48px", height: "48px", flexShrink: 0, marginTop: "2px" }}
-          />
+          {/* NoteAssemble logo icon — taps always go home */}
+          <Link href="/" style={{ display: "flex", flexShrink: 0, marginTop: "2px" }}>
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663419960068/VAGE5Jp3b45KbifC3JSBbp/noteassemble_n_pen_v2-ZeZuxKzcbqzkjBZnUtJHrN.webp"
+              alt="NoteAssemble — go to dashboard"
+              style={{ width: "48px", height: "48px", cursor: "pointer" }}
+            />
+          </Link>
         </div>
 
         {/* Free plan usage bar */}
